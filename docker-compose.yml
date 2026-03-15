@@ -6,7 +6,7 @@ services:
       context: .
       dockerfile: docker/Dockerfile.bridge
     ports:
-      - "3000:3000"   # Operator UI (browser)
+      - "4000:3000"   # Operator UI (browser)
       - "5555:5555"   # ZeroMQ PUB (real Pi displays connect here from LAN)
     environment:
       NODE_ENV: production

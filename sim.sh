@@ -41,7 +41,7 @@ fi
 echo ""
 echo "=== Caption Push is running ==="
 echo ""
-echo "  Operator UI  → http://localhost:3000"
+echo "  Operator UI  → http://localhost:4000"
 echo "  Display 1    → http://localhost:6080/vnc.html?autoconnect=1&resize=scale"
 echo "  Display 2    → http://localhost:6081/vnc.html?autoconnect=1&resize=scale"
 echo ""
@@ -52,7 +52,7 @@ echo "To logs:  docker compose logs -f"
 echo ""
 
 # Open browser tabs
-open "http://localhost:3000"
+open "http://localhost:4000"
 sleep 1
 open "http://localhost:6080/vnc.html?autoconnect=1&resize=scale"
 sleep 0.5
