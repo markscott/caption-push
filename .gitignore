@@ -10,3 +10,5 @@ build/
 .DS_Store
 *.swp
 *.log
+controller/node_modules/
+controller/dist/

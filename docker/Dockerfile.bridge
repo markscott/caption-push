@@ -1,0 +1,18 @@
+FROM node:20-slim
+
+WORKDIR /app
+
+# Install deps (keep devDeps for tsx + vite)
+COPY controller/package*.json ./
+RUN npm ci
+
+# Copy source and build the React frontend
+COPY controller/ ./
+RUN npm run build
+
+EXPOSE 3000 5555
+
+ENV NODE_ENV=production
+
+# Run the bridge server via tsx (no separate compile step)
+CMD ["./node_modules/.bin/tsx", "server.ts"]

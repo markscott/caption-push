@@ -1,0 +1,52 @@
+services:
+
+  # ---- Node.js bridge: React UI + WebSocket + ZeroMQ PUB ----
+  bridge:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.bridge
+    ports:
+      - "3000:3000"   # Operator UI (browser)
+      - "5555:5555"   # ZeroMQ PUB (real Pi displays connect here from LAN)
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      ZMQ_ADDRESS: "tcp://*:5555"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', r => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  # ---- Display 1 simulator ----
+  display1:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.display
+    ports:
+      - "6080:6080"   # noVNC → http://localhost:6080/vnc.html
+    environment:
+      DISPLAY_ID: "1"
+      CONTROLLER_ADDRESS: "tcp://bridge:5555"
+      PIXEL_SIZE: "8"
+      PIXEL_GAP: "1"
+    depends_on:
+      bridge:
+        condition: service_healthy
+
+  # ---- Display 2 simulator ----
+  display2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.display
+    ports:
+      - "6081:6080"   # noVNC → http://localhost:6081/vnc.html
+    environment:
+      DISPLAY_ID: "2"
+      CONTROLLER_ADDRESS: "tcp://bridge:5555"
+      PIXEL_SIZE: "8"
+      PIXEL_GAP: "1"
+    depends_on:
+      bridge:
+        condition: service_healthy

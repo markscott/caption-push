@@ -1,55 +1,59 @@
 #!/usr/bin/env bash
-# sim.sh — Launch the full Caption Push simulation on macOS
+# sim.sh — Launch the full Caption Push simulation via Docker Desktop
 #
-# Opens three Terminal windows:
-#   1. Display #1 (pygame LED simulator)
-#   2. Display #2 (pygame LED simulator)
-#   3. Node.js bridge server (ZeroMQ PUB + WebSocket)
+# Services started:
+#   bridge    — Node.js bridge server (React UI + ZeroMQ PUB)  → http://localhost:3000
+#   display1  — LED panel simulator #1 (noVNC)                 → http://localhost:6080/vnc.html
+#   display2  — LED panel simulator #2 (noVNC)                 → http://localhost:6081/vnc.html
 #
-# Then opens the operator UI in your default browser.
-#
-# Prerequisites (run once):
-#   python3 -m pip install pyzmq Pillow pygame numpy
-#   cd controller && npm install
+# Prerequisites: Docker Desktop running
 
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$DIR"
 
-# ---- Verify dependencies ----
-if ! python3 -c "import zmq, PIL, pygame, numpy" 2>/dev/null; then
-  echo "Missing Python deps. Run:"
-  echo "  python3 -m pip install pyzmq Pillow pygame numpy"
+# ---- Check Docker is running ----
+if ! docker info &>/dev/null; then
+  echo "Docker Desktop is not running. Please start it and try again."
   exit 1
 fi
 
-if [ ! -d "$DIR/controller/node_modules" ]; then
-  echo "Node modules not installed. Run:"
-  echo "  cd controller && npm install"
+echo "Building and starting Caption Push..."
+docker compose up --build -d
+
+echo ""
+echo "Waiting for services to be ready..."
+
+# Wait for the bridge health check to pass
+attempt=0
+until docker compose ps bridge | grep -q "healthy" || [ $attempt -ge 30 ]; do
+  sleep 2
+  attempt=$((attempt + 1))
+done
+
+if [ $attempt -ge 30 ]; then
+  echo "Bridge did not become healthy in time. Check logs:"
+  echo "  docker compose logs bridge"
   exit 1
 fi
 
-echo "Starting Caption Push simulation..."
-
-# Open three Terminal windows via AppleScript
-osascript <<EOF
-tell application "Terminal"
-  -- Display 1
-  do script "cd '$DIR' && python3 -m display.daemon --sim --id 1 --address tcp://localhost:5555; exec zsh"
-  -- Display 2
-  do script "cd '$DIR' && python3 -m display.daemon --sim --id 2 --address tcp://localhost:5555; exec zsh"
-  -- Bridge server + open browser
-  do script "cd '$DIR/controller' && npm run dev; exec zsh"
-end tell
-EOF
-
-# Give the bridge server 2 seconds to start, then open the UI
-sleep 2
-open "http://localhost:5173"
-
 echo ""
-echo "Simulation running:"
-echo "  Display 1 & 2 — pygame windows (LED panel simulators)"
-echo "  Operator UI   — http://localhost:5173"
+echo "=== Caption Push is running ==="
 echo ""
-echo "Load scripts/example.srt in the browser to test."
+echo "  Operator UI  → http://localhost:3000"
+echo "  Display 1    → http://localhost:6080/vnc.html?autoconnect=1&resize=scale"
+echo "  Display 2    → http://localhost:6081/vnc.html?autoconnect=1&resize=scale"
+echo ""
+echo "Load scripts/example.srt in the operator UI, then press Space to advance captions."
+echo ""
+echo "To stop:  docker compose down"
+echo "To logs:  docker compose logs -f"
+echo ""
+
+# Open browser tabs
+open "http://localhost:3000"
+sleep 1
+open "http://localhost:6080/vnc.html?autoconnect=1&resize=scale"
+sleep 0.5
+open "http://localhost:6081/vnc.html?autoconnect=1&resize=scale"
