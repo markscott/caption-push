@@ -5,11 +5,15 @@ DISPLAY_ID="${DISPLAY_ID:-1}"
 CONTROLLER_ADDRESS="${CONTROLLER_ADDRESS:-tcp://bridge:5555}"
 PIXEL_SIZE="${PIXEL_SIZE:-8}"
 PIXEL_GAP="${PIXEL_GAP:-1}"
+PANEL_WIDTH="${PANEL_WIDTH:-128}"
+PANEL_HEIGHT="${PANEL_HEIGHT:-64}"
+FONT_SIZE="${FONT_SIZE:-24}"
 
-# ---- Virtual framebuffer ----
-# Window size: 128 panels * (pixel_size + pixel_gap) wide, 32 * cell high
-# Default: 128*9=1152 x 32*9=288 — give Xvfb some extra room
-Xvfb :99 -screen 0 1280x400x24 -ac &
+# ---- Virtual framebuffer — sized to fit the pygame window ----
+CELL=$(( PIXEL_SIZE + PIXEL_GAP ))
+XVFB_W=$(( (PANEL_WIDTH  + 4) * CELL ))
+XVFB_H=$(( (PANEL_HEIGHT + 4) * CELL ))
+Xvfb :99 -screen 0 ${XVFB_W}x${XVFB_H}x24 -ac &
 XVFB_PID=$!
 sleep 1
 
@@ -44,5 +48,8 @@ exec python3 -m display.daemon \
   --sim \
   --id "${DISPLAY_ID}" \
   --address "${CONTROLLER_ADDRESS}" \
+  --width "${PANEL_WIDTH}" \
+  --height "${PANEL_HEIGHT}" \
+  --font-size "${FONT_SIZE}" \
   --pixel-size "${PIXEL_SIZE}" \
   --pixel-gap "${PIXEL_GAP}"

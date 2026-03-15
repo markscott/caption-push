@@ -4,16 +4,20 @@ from dataclasses import dataclass, field
 
 from PIL import Image, ImageDraw, ImageFont
 
+LINE_SPACING = 4   # px between lines
+PADDING_X = 4      # px horizontal padding
+
 
 @dataclass
 class RenderConfig:
     width: int = 128
-    height: int = 32
+    height: int = 64
     font_path: str = "default"
-    font_size: int = 20
+    font_size: int = 24
     color: tuple[int, int, int] = field(default_factory=lambda: (255, 255, 255))
     halign: str = "center"
     valign: str = "center"
+    max_lines: int = 2
 
 
 def _load_font(config: RenderConfig) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -21,9 +25,44 @@ def _load_font(config: RenderConfig) -> ImageFont.FreeTypeFont | ImageFont.Image
         try:
             return ImageFont.load_default(size=config.font_size)
         except TypeError:
-            # Pillow < 10: load_default() accepts no size argument
+            # Pillow < 10
             return ImageFont.load_default()
     return ImageFont.truetype(config.font_path, config.font_size)
+
+
+def _wrap(
+    text: str,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    draw: ImageDraw.ImageDraw,
+    max_width: int,
+    max_lines: int,
+) -> list[str]:
+    """Greedily wrap text into at most max_lines lines that each fit max_width px."""
+    words = text.split()
+    if not words:
+        return [""]
+
+    lines: list[str] = []
+
+    while words:
+        # Last allowed line — dump everything remaining onto it
+        if len(lines) == max_lines - 1:
+            lines.append(" ".join(words))
+            break
+
+        # Find the longest prefix of words that fits
+        fit = 1
+        while fit < len(words):
+            candidate = " ".join(words[: fit + 1])
+            bb = draw.textbbox((0, 0), candidate, font=font)
+            if bb[2] - bb[0] > max_width:
+                break
+            fit += 1
+
+        lines.append(" ".join(words[:fit]))
+        words = words[fit:]
+
+    return lines
 
 
 def render_text(text: str, config: RenderConfig) -> Image.Image:
@@ -34,27 +73,36 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
     draw = ImageDraw.Draw(img)
     font = _load_font(config)
 
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_w = bbox[2] - bbox[0]
-    text_h = bbox[3] - bbox[1]
+    lines = _wrap(text, font, draw, config.width - PADDING_X * 2, config.max_lines)
 
-    # Horizontal position
-    if config.halign == "center":
-        x = max(0, (config.width - text_w) // 2)
-    elif config.halign == "right":
-        x = max(0, config.width - text_w - 2)
-    else:
-        x = 2
+    # Measure each line
+    bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
+    line_heights = [bb[3] - bb[1] for bb in bboxes]
+    total_h = sum(line_heights) + LINE_SPACING * (len(lines) - 1)
 
-    # Vertical position (bbox[1] is the ascent offset, subtract it to avoid top-clip)
+    # Visual top of the text block
     if config.valign == "center":
-        y = max(0, (config.height - text_h) // 2 - bbox[1])
+        block_top = (config.height - total_h) // 2
     elif config.valign == "bottom":
-        y = max(0, config.height - text_h - 2 - bbox[1])
+        block_top = config.height - total_h - 2
     else:
-        y = 2 - bbox[1]
+        block_top = 2
 
-    draw.text((x, y), text, font=font, fill=config.color)
+    current_y = block_top
+    for line, bb, lh in zip(lines, bboxes, line_heights):
+        text_w = bb[2] - bb[0]
+
+        if config.halign == "center":
+            x = max(0, (config.width - text_w) // 2)
+        elif config.halign == "right":
+            x = max(0, config.width - text_w - PADDING_X)
+        else:
+            x = PADDING_X
+
+        # bb[1] is the ascent offset — subtract so visual top lands at current_y
+        draw.text((x, current_y - bb[1]), line, font=font, fill=config.color)
+        current_y += lh + LINE_SPACING
+
     return img
 
 
@@ -69,8 +117,9 @@ def render_identify(display_id: int, config: RenderConfig) -> Image.Image:
         height=config.height,
         font_path=config.font_path,
         font_size=config.font_size,
-        color=(255, 160, 0),  # amber
+        color=(255, 160, 0),
         halign="center",
         valign="center",
+        max_lines=1,
     )
     return render_text(f"Display #{display_id}", cfg)

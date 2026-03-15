@@ -29,6 +29,9 @@ services:
     environment:
       DISPLAY_ID: "1"
       CONTROLLER_ADDRESS: "tcp://bridge:5555"
+      PANEL_WIDTH: "128"
+      PANEL_HEIGHT: "64"
+      FONT_SIZE: "24"
       PIXEL_SIZE: "8"
       PIXEL_GAP: "1"
     depends_on:
@@ -45,6 +48,9 @@ services:
     environment:
       DISPLAY_ID: "2"
       CONTROLLER_ADDRESS: "tcp://bridge:5555"
+      PANEL_WIDTH: "128"
+      PANEL_HEIGHT: "64"
+      FONT_SIZE: "24"
       PIXEL_SIZE: "8"
       PIXEL_GAP: "1"
     depends_on:
