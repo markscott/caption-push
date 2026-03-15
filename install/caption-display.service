@@ -1,0 +1,20 @@
+[Unit]
+Description=Caption Push — LED Display Daemon
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/caption-push/display.env
+ExecStart=/usr/bin/python3 /opt/caption-push/display/daemon.py \
+    --address tcp://${CONTROLLER_IP}:5555 \
+    --id ${DISPLAY_ID}
+Restart=always
+RestartSec=5
+User=root
+WorkingDirectory=/opt/caption-push
+# Slightly elevated priority for smooth display updates
+Nice=-10
+
+[Install]
+WantedBy=multi-user.target

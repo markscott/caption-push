@@ -1,0 +1,38 @@
+[network]
+# Address the controller binds to (publisher side)
+pub_address = "tcp://*:5555"
+# Address displays connect to — set to controller's LAN IP on real Pi hardware
+sub_address = "tcp://localhost:5555"
+
+[display]
+# Single panel dimensions
+panel_width = 64
+panel_height = 32
+# Number of panels daisy-chained (total width = panel_width * chain_length)
+chain_length = 2
+# rpi-rgb-led-matrix GPIO mapping; ignored in simulation
+gpio_mapping = "adafruit-hat"
+# GPIO slowdown factor (1=Pi4, 2=Pi3, 4=Pi Zero 2W)
+gpio_slowdown = 4
+# Brightness 0–100
+brightness = 60
+
+[font]
+# "default" uses Pillow's built-in font; or supply an absolute path to a .ttf
+path = "default"
+# Font height in pixels (should be <= panel_height - 4 for padding)
+size = 20
+# Default text color (hex)
+color = "#FFFFFF"
+# Alignment: "center" | "left" | "right"
+halign = "center"
+# Vertical alignment: "center" | "top" | "bottom"
+valign = "center"
+
+[simulation]
+# Screen pixels per LED dot
+pixel_size = 8
+# Screen pixels of gap between LED dots
+pixel_gap = 1
+# Window title prefix
+title = "Caption Display"

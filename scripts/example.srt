@@ -1,0 +1,39 @@
+1
+00:00:01,000 --> 00:00:04,000
+To be, or not to be — that is the question.
+
+2
+00:00:05,000 --> 00:00:08,000
+Whether 'tis nobler in the mind to suffer
+
+3
+00:00:09,000 --> 00:00:12,000
+The slings and arrows of outrageous fortune,
+
+4
+00:00:13,000 --> 00:00:16,000
+Or to take arms against a sea of troubles
+
+5
+00:00:17,000 --> 00:00:20,000
+And by opposing end them.
+
+6
+00:00:22,000 --> 00:00:25,000
+To die — to sleep, no more;
+
+7
+00:00:26,000 --> 00:00:29,000
+And by a sleep to say we end
+
+8
+00:00:30,000 --> 00:00:33,000
+The heartache and the thousand natural shocks
+
+9
+00:00:34,000 --> 00:00:37,000
+That flesh is heir to.
+
+10
+00:00:38,000 --> 00:00:41,000
+'Tis a consummation devoutly to be wished.
