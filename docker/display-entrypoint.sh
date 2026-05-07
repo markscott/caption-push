@@ -10,10 +10,10 @@ PANEL_HEIGHT="${PANEL_HEIGHT:-64}"
 FONT_SIZE="${FONT_SIZE:-24}"
 MAX_LINES="${MAX_LINES:-1}"
 
-# ---- Virtual framebuffer — sized to fit the pygame window ----
+# ---- Virtual framebuffer — sized to exactly match the pygame window ----
 CELL=$(( PIXEL_SIZE + PIXEL_GAP ))
-XVFB_W=$(( (PANEL_WIDTH  + 4) * CELL ))
-XVFB_H=$(( (PANEL_HEIGHT + 4) * CELL ))
+XVFB_W=$(( PANEL_WIDTH  * CELL ))
+XVFB_H=$(( PANEL_HEIGHT * CELL ))
 Xvfb :99 -screen 0 ${XVFB_W}x${XVFB_H}x24 -ac &
 XVFB_PID=$!
 sleep 1
