@@ -36,11 +36,16 @@ x11vnc \
 echo "[display-${DISPLAY_ID}] x11vnc started on :5900"
 
 # ---- noVNC index — auto-connects; fullscreen prompt + auto-hide control handle ----
-cat > /usr/share/novnc/index.html <<'EOF'
+# Timestamp-based cache buster so browsers always reload after a container restart
+CACHE_BUST=$(date +%s)
+cat > /usr/share/novnc/index.html <<HTMLEOF
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: #000; width: 100vw; height: 100vh; overflow: hidden; }
@@ -55,7 +60,7 @@ cat > /usr/share/novnc/index.html <<'EOF'
   </style>
 </head>
 <body>
-  <iframe src="vnc.html?autoconnect=1&resize=scale" allowfullscreen></iframe>
+  <iframe src="vnc.html?autoconnect=1&resize=scale&v=${CACHE_BUST}" allowfullscreen></iframe>
   <div id="fs-overlay">Click to go fullscreen</div>
   <script>
     const iframe  = document.querySelector('iframe');
@@ -160,7 +165,7 @@ cat > /usr/share/novnc/index.html <<'EOF'
   </script>
 </body>
 </html>
-EOF
+HTMLEOF
 
 # ---- noVNC websockify proxy ----
 # Serves the HTML5 VNC client on port 6080
