@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 LINE_SPACING = 4   # px between lines
 PADDING_X = 4      # px horizontal padding
@@ -65,16 +65,12 @@ def _wrap(
     return lines
 
 
-SHADOW_COLOR = (45, 45, 45)
-
-
 def _scale_to_fit(
     text: str,
     config: RenderConfig,
     draw: ImageDraw.ImageDraw,
 ) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, int]:
-    """Binary search for the largest font size where text fits in one line.
-    Returns (font, fitted_size)."""
+    """Binary search for the largest font size where text fits in one line."""
     max_w = config.width - PADDING_X * 2
     lo, hi = 8, config.font_size
     best = _load_font(replace(config, font_size=lo))
@@ -91,17 +87,36 @@ def _scale_to_fit(
     return best, best_size
 
 
-def _draw_with_shadow(
-    draw: ImageDraw.ImageDraw,
-    xy: tuple[int, int],
-    text: str,
-    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
-    fill: tuple[int, int, int],
-    shadow_px: int,
-) -> None:
-    x, y = xy
-    draw.text((x + shadow_px, y + shadow_px), text, font=font, fill=SHADOW_COLOR)
-    draw.text((x, y), text, font=font, fill=fill)
+def _text_positions(
+    lines: list[str],
+    bboxes: list[tuple[int, int, int, int]],
+    config: RenderConfig,
+) -> list[tuple[str, int, int]]:
+    """Return (line, x, y) draw positions for all lines."""
+    line_heights = [bb[3] - bb[1] for bb in bboxes]
+    total_h = sum(line_heights) + LINE_SPACING * (len(lines) - 1)
+
+    if config.valign == "center":
+        block_top = (config.height - total_h) // 2
+    elif config.valign == "bottom":
+        block_top = config.height - total_h - 2
+    else:
+        block_top = 2
+
+    positions: list[tuple[str, int, int]] = []
+    current_y = block_top
+    for line, bb, lh in zip(lines, bboxes, line_heights):
+        text_w = bb[2] - bb[0]
+        if config.halign == "center":
+            x = max(0, (config.width - text_w) // 2)
+        elif config.halign == "right":
+            x = max(0, config.width - text_w - PADDING_X)
+        else:
+            x = PADDING_X
+        positions.append((line, x, current_y - bb[1]))
+        current_y += lh + LINE_SPACING
+
+    return positions
 
 
 def render_text(text: str, config: RenderConfig) -> Image.Image:
@@ -114,36 +129,31 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
     if config.max_lines == 1:
         font, fitted_size = _scale_to_fit(text, config, draw)
         lines = [text]
-        shadow_px = max(2, fitted_size // 25)
+        shadow_offset = max(6, fitted_size // 18)
+        shadow_blur   = max(4, fitted_size // 24)
     else:
         font = _load_font(config)
         lines = _wrap(text, font, draw, config.width - PADDING_X * 2, config.max_lines)
-        shadow_px = max(2, config.font_size // 25)
+        shadow_offset = max(6, config.font_size // 18)
+        shadow_blur   = max(4, config.font_size // 24)
 
     bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
-    line_heights = [bb[3] - bb[1] for bb in bboxes]
-    total_h = sum(line_heights) + LINE_SPACING * (len(lines) - 1)
+    positions = _text_positions(lines, bboxes, config)
 
-    if config.valign == "center":
-        block_top = (config.height - total_h) // 2
-    elif config.valign == "bottom":
-        block_top = config.height - total_h - 2
-    else:
-        block_top = 2
+    # Blurred drop shadow: draw text at offset in a dim shade of the text
+    # color, blur it, then add to the (black) base image so it's visible.
+    shadow_color = tuple(max(80, c // 3) for c in config.color)
+    shadow_layer = Image.new("RGB", img.size, (0, 0, 0))
+    sd = ImageDraw.Draw(shadow_layer)
+    for line, x, y in positions:
+        sd.text((x + shadow_offset, y + shadow_offset), line, font=font, fill=shadow_color)
+    shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=shadow_blur))
+    img = ImageChops.add(img, shadow_layer)
 
-    current_y = block_top
-    for line, bb, lh in zip(lines, bboxes, line_heights):
-        text_w = bb[2] - bb[0]
-
-        if config.halign == "center":
-            x = max(0, (config.width - text_w) // 2)
-        elif config.halign == "right":
-            x = max(0, config.width - text_w - PADDING_X)
-        else:
-            x = PADDING_X
-
-        _draw_with_shadow(draw, (x, current_y - bb[1]), line, font, config.color, shadow_px)
-        current_y += lh + LINE_SPACING
+    # Sharp main text on top
+    draw = ImageDraw.Draw(img)
+    for line, x, y in positions:
+        draw.text((x, y), line, font=font, fill=config.color)
 
     return img
 
