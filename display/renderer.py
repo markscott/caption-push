@@ -6,6 +6,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
 LINE_SPACING = 4   # px between lines
 PADDING_X = 4      # px horizontal padding
+WORD_LIMIT = 20    # words beyond this are dropped
+TWO_LINE_THRESHOLD = 9  # more than this many words → 2-line layout
 
 
 @dataclass
@@ -17,7 +19,7 @@ class RenderConfig:
     color: tuple[int, int, int] = field(default_factory=lambda: (255, 255, 255))
     halign: str = "center"
     valign: str = "center"
-    max_lines: int = 2
+    max_lines: int = 2  # kept for API compatibility; layout is driven by word count
 
 
 def _load_font(config: RenderConfig) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
@@ -25,61 +27,61 @@ def _load_font(config: RenderConfig) -> ImageFont.FreeTypeFont | ImageFont.Image
         try:
             return ImageFont.load_default(size=config.font_size)
         except TypeError:
-            # Pillow < 10
             return ImageFont.load_default()
     return ImageFont.truetype(config.font_path, config.font_size)
 
 
-def _wrap(
-    text: str,
-    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
-    draw: ImageDraw.ImageDraw,
-    max_width: int,
-    max_lines: int,
-) -> list[str]:
-    """Greedily wrap text into at most max_lines lines that each fit max_width px."""
-    words = text.split()
-    if not words:
-        return [""]
-
-    lines: list[str] = []
-
-    while words:
-        # Last allowed line — dump everything remaining onto it
-        if len(lines) == max_lines - 1:
-            lines.append(" ".join(words))
-            break
-
-        # Find the longest prefix of words that fits
-        fit = 1
-        while fit < len(words):
-            candidate = " ".join(words[: fit + 1])
-            bb = draw.textbbox((0, 0), candidate, font=font)
-            if bb[2] - bb[0] > max_width:
-                break
-            fit += 1
-
-        lines.append(" ".join(words[:fit]))
-        words = words[fit:]
-
-    return lines
+def _split_two_lines(words: list[str]) -> tuple[str, str]:
+    """Split word list into two lines as equal in character length as possible."""
+    best_split = max(1, len(words) // 2)
+    best_diff = float('inf')
+    for i in range(1, len(words)):
+        diff = abs(len(" ".join(words[:i])) - len(" ".join(words[i:])))
+        if diff < best_diff:
+            best_diff = diff
+            best_split = i
+    return " ".join(words[:best_split]), " ".join(words[best_split:])
 
 
-def _scale_to_fit(
+def _scale_to_fit_one(
     text: str,
     config: RenderConfig,
     draw: ImageDraw.ImageDraw,
 ) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, int]:
-    """Binary search for the largest font size where text fits in one line."""
+    """Binary search for the largest font size where text fits on one line."""
     max_w = config.width - PADDING_X * 2
     lo, hi = 8, config.font_size
-    best = _load_font(replace(config, font_size=lo))
-    best_size = lo
+    best, best_size = _load_font(replace(config, font_size=lo)), lo
     while lo <= hi:
         mid = (lo + hi) // 2
         font = _load_font(replace(config, font_size=mid))
         bb = draw.textbbox((0, 0), text, font=font)
         if bb[2] - bb[0] <= max_w:
+            best, best_size = font, mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return best, best_size
+
+
+def _scale_to_fit_two(
+    line1: str,
+    line2: str,
+    config: RenderConfig,
+    draw: ImageDraw.ImageDraw,
+) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, int]:
+    """Binary search for the largest font where both lines fit in width and height."""
+    max_w = config.width - PADDING_X * 2
+    lo, hi = 8, config.font_size
+    best, best_size = _load_font(replace(config, font_size=lo)), lo
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        font = _load_font(replace(config, font_size=mid))
+        bb1 = draw.textbbox((0, 0), line1, font=font)
+        bb2 = draw.textbbox((0, 0), line2, font=font)
+        fits_w = (bb1[2] - bb1[0]) <= max_w and (bb2[2] - bb2[0]) <= max_w
+        total_h = (bb1[3] - bb1[1]) + (bb2[3] - bb2[1]) + LINE_SPACING
+        if fits_w and total_h <= config.height:
             best, best_size = font, mid
             lo = mid + 1
         else:
@@ -125,23 +127,23 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
         return img
 
     draw = ImageDraw.Draw(img)
+    words = text.split()[:WORD_LIMIT]
 
-    if config.max_lines == 1:
-        font, fitted_size = _scale_to_fit(text, config, draw)
-        lines = [text]
-        shadow_offset = max(3, fitted_size // 36)
-        shadow_blur   = max(2, fitted_size // 48)
+    if len(words) > TWO_LINE_THRESHOLD:
+        line1, line2 = _split_two_lines(words)
+        font, fitted_size = _scale_to_fit_two(line1, line2, config, draw)
+        lines = [line1, line2]
     else:
-        font = _load_font(config)
-        lines = _wrap(text, font, draw, config.width - PADDING_X * 2, config.max_lines)
-        shadow_offset = max(3, config.font_size // 36)
-        shadow_blur   = max(2, config.font_size // 48)
+        joined = " ".join(words)
+        font, fitted_size = _scale_to_fit_one(joined, config, draw)
+        lines = [joined]
+
+    shadow_offset = max(3, fitted_size // 36)
+    shadow_blur   = max(2, fitted_size // 48)
 
     bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
     positions = _text_positions(lines, bboxes, config)
 
-    # Blurred drop shadow: draw text at offset in a dim shade of the text
-    # color, blur it, then add to the (black) base image so it's visible.
     shadow_color = tuple(max(40, c // 6) for c in config.color)
     shadow_layer = Image.new("RGB", img.size, (0, 0, 0))
     sd = ImageDraw.Draw(shadow_layer)
@@ -150,7 +152,6 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
     shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=shadow_blur))
     img = ImageChops.add(img, shadow_layer)
 
-    # Sharp main text on top
     draw = ImageDraw.Draw(img)
     for line, x, y in positions:
         draw.text((x, y), line, font=font, fill=config.color)
@@ -172,6 +173,5 @@ def render_identify(display_id: int, config: RenderConfig) -> Image.Image:
         color=(255, 160, 0),
         halign="center",
         valign="center",
-        max_lines=1,
     )
     return render_text(f"Display #{display_id}", cfg)
