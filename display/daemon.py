@@ -42,6 +42,8 @@ def main() -> None:
     parser.add_argument("--brightness", type=int, default=60)
     parser.add_argument("--font-size", type=int, default=20)
     parser.add_argument("--font-path", type=str, default="default")
+    parser.add_argument("--max-lines", type=int, default=1,
+                        help="Maximum lines of text to render (1 = single line, full height)")
     parser.add_argument("--sim", action="store_true",
                         help="Force simulation mode (auto-detected when not on Pi)")
     parser.add_argument("--pixel-size", type=int, default=8,
@@ -76,6 +78,7 @@ def main() -> None:
         height=args.height,
         font_path=args.font_path,
         font_size=args.font_size,
+        max_lines=args.max_lines,
     )
 
     # ZeroMQ subscriber — connects to the controller's PUB socket
@@ -112,6 +115,7 @@ def main() -> None:
                         height=base_config.height,
                         font_path=base_config.font_path,
                         font_size=base_config.font_size,
+                        max_lines=base_config.max_lines,
                         color=color,
                         halign=msg.get("align", "center"),
                     )

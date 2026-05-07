@@ -8,6 +8,7 @@ PIXEL_GAP="${PIXEL_GAP:-1}"
 PANEL_WIDTH="${PANEL_WIDTH:-128}"
 PANEL_HEIGHT="${PANEL_HEIGHT:-64}"
 FONT_SIZE="${FONT_SIZE:-24}"
+MAX_LINES="${MAX_LINES:-1}"
 
 # ---- Virtual framebuffer — sized to fit the pygame window ----
 CELL=$(( PIXEL_SIZE + PIXEL_GAP ))
@@ -34,6 +35,133 @@ x11vnc \
 
 echo "[display-${DISPLAY_ID}] x11vnc started on :5900"
 
+# ---- noVNC index — auto-connects; fullscreen prompt + auto-hide control handle ----
+cat > /usr/share/novnc/index.html <<'EOF'
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; width: 100vw; height: 100vh; overflow: hidden; }
+    iframe { width: 100%; height: 100%; border: none; display: block; }
+    #fs-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.82);
+      display: none; align-items: center; justify-content: center;
+      cursor: pointer; z-index: 999;
+      color: #fff; font: 600 20px system-ui; user-select: none;
+    }
+    #fs-overlay.visible { display: flex; }
+  </style>
+</head>
+<body>
+  <iframe src="vnc.html?autoconnect=1&resize=scale" allowfullscreen></iframe>
+  <div id="fs-overlay">Click to go fullscreen</div>
+  <script>
+    const iframe  = document.querySelector('iframe');
+    const overlay = document.getElementById('fs-overlay');
+
+    // ---- Fullscreen prompt ------------------------------------------------
+
+    function goFullscreen() {
+      document.documentElement.requestFullscreen().then(() => {
+        overlay.classList.remove('visible');
+      });
+    }
+    overlay.onclick = goFullscreen;
+
+    if (new URLSearchParams(location.search).has('fullscreen')) {
+      overlay.classList.add('visible');
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      if (!document.fullscreenElement && !isOnPrimary()) {
+        overlay.classList.add('visible');
+      }
+    });
+
+    function isOnPrimary() {
+      const cx = window.screenX + window.outerWidth  / 2;
+      const cy = window.screenY + window.outerHeight / 2;
+      return cx >= 0 && cx < screen.width && cy >= 0 && cy < screen.height;
+    }
+
+    let prevOnPrimary = isOnPrimary();
+    setInterval(() => {
+      if (document.fullscreenElement) return;
+      const onPrimary = isOnPrimary();
+      if (prevOnPrimary && !onPrimary)  overlay.classList.add('visible');
+      if (!prevOnPrimary && onPrimary)  overlay.classList.remove('visible');
+      prevOnPrimary = onPrimary;
+    }, 500);
+
+    // ---- Control bar auto-hide in fullscreen ------------------------------
+
+    let handleReady = false;
+    let hideTimer   = null;
+    let autoHide    = false;
+
+    function setupHandleAutoHide() {
+      if (handleReady) return;
+      try {
+        const iDoc   = iframe.contentDocument;
+        const handle = iDoc && iDoc.getElementById('noVNC_control_bar_handle');
+        if (!handle) return;
+        handleReady = true;
+
+        handle.style.transition = 'opacity 0.25s ease';
+
+        function showHandle() {
+          clearTimeout(hideTimer);
+          handle.style.opacity      = '1';
+          handle.style.pointerEvents = '';
+        }
+
+        function hideHandle() {
+          handle.style.opacity      = '0';
+          handle.style.pointerEvents = 'none';
+        }
+
+        function scheduleHide() {
+          clearTimeout(hideTimer);
+          hideTimer = setTimeout(hideHandle, 1500);
+        }
+
+        // Mouse near left edge → reveal; further right → schedule hide
+        iDoc.addEventListener('mousemove', (e) => {
+          if (!autoHide) return;
+          if (e.clientX < 64) showHandle();
+          else                 scheduleHide();
+        });
+
+        // Keep visible while cursor is on the handle itself
+        handle.addEventListener('mouseenter', () => { if (autoHide) clearTimeout(hideTimer); });
+        handle.addEventListener('mouseleave', () => { if (autoHide) scheduleHide(); });
+
+        // Toggle auto-hide with fullscreen state
+        function applyFullscreenState() {
+          autoHide = !!document.fullscreenElement;
+          autoHide ? hideHandle() : showHandle();
+        }
+
+        document.addEventListener('fullscreenchange', applyFullscreenState);
+        applyFullscreenState();
+
+      } catch (e) { /* not ready yet */ }
+    }
+
+    // Retry until noVNC has rendered its elements
+    iframe.addEventListener('load', () => {
+      const poll = setInterval(() => {
+        setupHandleAutoHide();
+        if (handleReady) clearInterval(poll);
+      }, 200);
+    });
+  </script>
+</body>
+</html>
+EOF
+
 # ---- noVNC websockify proxy ----
 # Serves the HTML5 VNC client on port 6080
 websockify \
@@ -41,7 +169,7 @@ websockify \
   --log-file /tmp/websockify.log \
   6080 localhost:5900 &
 
-echo "[display-${DISPLAY_ID}] noVNC available at http://localhost:6080/vnc.html"
+echo "[display-${DISPLAY_ID}] noVNC available at http://localhost:6080/ (auto-scales to browser window)"
 
 # ---- Caption display daemon ----
 exec python3 -m display.daemon \
@@ -52,4 +180,5 @@ exec python3 -m display.daemon \
   --height "${PANEL_HEIGHT}" \
   --font-size "${FONT_SIZE}" \
   --pixel-size "${PIXEL_SIZE}" \
-  --pixel-gap "${PIXEL_GAP}"
+  --pixel-gap "${PIXEL_GAP}" \
+  --max-lines "${MAX_LINES}"

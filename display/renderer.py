@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from PIL import Image, ImageDraw, ImageFont
 
@@ -65,22 +65,65 @@ def _wrap(
     return lines
 
 
+SHADOW_COLOR = (45, 45, 45)
+
+
+def _scale_to_fit(
+    text: str,
+    config: RenderConfig,
+    draw: ImageDraw.ImageDraw,
+) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, int]:
+    """Binary search for the largest font size where text fits in one line.
+    Returns (font, fitted_size)."""
+    max_w = config.width - PADDING_X * 2
+    lo, hi = 8, config.font_size
+    best = _load_font(replace(config, font_size=lo))
+    best_size = lo
+    while lo <= hi:
+        mid = (lo + hi) // 2
+        font = _load_font(replace(config, font_size=mid))
+        bb = draw.textbbox((0, 0), text, font=font)
+        if bb[2] - bb[0] <= max_w:
+            best, best_size = font, mid
+            lo = mid + 1
+        else:
+            hi = mid - 1
+    return best, best_size
+
+
+def _draw_with_shadow(
+    draw: ImageDraw.ImageDraw,
+    xy: tuple[int, int],
+    text: str,
+    font: ImageFont.FreeTypeFont | ImageFont.ImageFont,
+    fill: tuple[int, int, int],
+    shadow_px: int,
+) -> None:
+    x, y = xy
+    draw.text((x + shadow_px, y + shadow_px), text, font=font, fill=SHADOW_COLOR)
+    draw.text((x, y), text, font=font, fill=fill)
+
+
 def render_text(text: str, config: RenderConfig) -> Image.Image:
     img = Image.new("RGB", (config.width, config.height), (0, 0, 0))
     if not text:
         return img
 
     draw = ImageDraw.Draw(img)
-    font = _load_font(config)
 
-    lines = _wrap(text, font, draw, config.width - PADDING_X * 2, config.max_lines)
+    if config.max_lines == 1:
+        font, fitted_size = _scale_to_fit(text, config, draw)
+        lines = [text]
+        shadow_px = max(2, fitted_size // 25)
+    else:
+        font = _load_font(config)
+        lines = _wrap(text, font, draw, config.width - PADDING_X * 2, config.max_lines)
+        shadow_px = max(2, config.font_size // 25)
 
-    # Measure each line
     bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
     line_heights = [bb[3] - bb[1] for bb in bboxes]
     total_h = sum(line_heights) + LINE_SPACING * (len(lines) - 1)
 
-    # Visual top of the text block
     if config.valign == "center":
         block_top = (config.height - total_h) // 2
     elif config.valign == "bottom":
@@ -99,8 +142,7 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
         else:
             x = PADDING_X
 
-        # bb[1] is the ascent offset — subtract so visual top lands at current_y
-        draw.text((x, current_y - bb[1]), line, font=font, fill=config.color)
+        _draw_with_shadow(draw, (x, current_y - bb[1]), line, font, config.color, shadow_px)
         current_y += lh + LINE_SPACING
 
     return img

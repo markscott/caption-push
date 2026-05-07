@@ -143,6 +143,17 @@ export default function App() {
     setStatusMsg(`Manual: "${text}"`)
   }
 
+  // ---- Display window launcher ----
+  function openDisplay(id: number, mode: 'test' | 'fullscreen') {
+    const port = 6079 + id
+    const base = `http://${window.location.hostname}:${port}/`
+    const url = mode === 'fullscreen' ? `${base}?fullscreen` : base
+    const features = mode === 'test'
+      ? 'width=960,height=180,resizable=yes,scrollbars=no'
+      : `width=${screen.width},height=${screen.height},left=0,top=0`
+    window.open(url, `display${id}_${mode}`, features)
+  }
+
   // ---- Derived display values ----
   const currentLine = currentIdx >= 0 ? lines[currentIdx] : null
   const nextLine = currentIdx + 1 < lines.length ? lines[currentIdx + 1] : null
@@ -240,6 +251,21 @@ export default function App() {
           <button className="btn btn-primary" onClick={sendManual}>
             Send
           </button>
+        </div>
+
+        <div className="display-launchers">
+          <div className="section-label">Display Windows</div>
+          {[1, 2].map(id => (
+            <div key={id} className="display-launcher-row">
+              <span className="display-launcher-label">Display {id}</span>
+              <button className="btn btn-outline" onClick={() => openDisplay(id, 'test')}>
+                Test Window
+              </button>
+              <button className="btn btn-secondary" onClick={() => openDisplay(id, 'fullscreen')}>
+                Fullscreen
+              </button>
+            </div>
+          ))}
         </div>
 
         <div className="kbd-hints">

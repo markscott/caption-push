@@ -29,11 +29,12 @@ services:
     environment:
       DISPLAY_ID: "1"
       CONTROLLER_ADDRESS: "tcp://bridge:5555"
-      PANEL_WIDTH: "128"
-      PANEL_HEIGHT: "64"
-      FONT_SIZE: "24"
-      PIXEL_SIZE: "8"
-      PIXEL_GAP: "1"
+      PANEL_WIDTH: "1920"
+      PANEL_HEIGHT: "360"
+      FONT_SIZE: "320"
+      MAX_LINES: "1"
+      PIXEL_SIZE: "1"
+      PIXEL_GAP: "0"
     depends_on:
       bridge:
         condition: service_healthy
@@ -48,11 +49,12 @@ services:
     environment:
       DISPLAY_ID: "2"
       CONTROLLER_ADDRESS: "tcp://bridge:5555"
-      PANEL_WIDTH: "128"
-      PANEL_HEIGHT: "64"
-      FONT_SIZE: "24"
-      PIXEL_SIZE: "8"
-      PIXEL_GAP: "1"
+      PANEL_WIDTH: "1920"
+      PANEL_HEIGHT: "360"
+      FONT_SIZE: "320"
+      MAX_LINES: "1"
+      PIXEL_SIZE: "1"
+      PIXEL_GAP: "0"
     depends_on:
       bridge:
         condition: service_healthy

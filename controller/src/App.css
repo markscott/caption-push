@@ -234,6 +234,30 @@ body {
 .manual-entry input:focus { border-color: var(--accent); }
 .manual-entry input::placeholder { color: var(--dim); }
 
+/* ---- Display launchers ---- */
+.display-launchers {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  flex-shrink: 0;
+}
+
+.display-launchers .section-label { margin-bottom: 10px; }
+
+.display-launcher-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.display-launcher-row:last-child { margin-bottom: 0; }
+
+.display-launcher-label {
+  font-size: 13px;
+  color: var(--text);
+  min-width: 70px;
+}
+
 /* ---- Keyboard hints ---- */
 .kbd-hints {
   padding: 12px 24px;
