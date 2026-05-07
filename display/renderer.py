@@ -129,20 +129,20 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
     if config.max_lines == 1:
         font, fitted_size = _scale_to_fit(text, config, draw)
         lines = [text]
-        shadow_offset = max(6, fitted_size // 18)
-        shadow_blur   = max(4, fitted_size // 24)
+        shadow_offset = max(3, fitted_size // 36)
+        shadow_blur   = max(2, fitted_size // 48)
     else:
         font = _load_font(config)
         lines = _wrap(text, font, draw, config.width - PADDING_X * 2, config.max_lines)
-        shadow_offset = max(6, config.font_size // 18)
-        shadow_blur   = max(4, config.font_size // 24)
+        shadow_offset = max(3, config.font_size // 36)
+        shadow_blur   = max(2, config.font_size // 48)
 
     bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
     positions = _text_positions(lines, bboxes, config)
 
     # Blurred drop shadow: draw text at offset in a dim shade of the text
     # color, blur it, then add to the (black) base image so it's visible.
-    shadow_color = tuple(max(80, c // 3) for c in config.color)
+    shadow_color = tuple(max(40, c // 6) for c in config.color)
     shadow_layer = Image.new("RGB", img.size, (0, 0, 0))
     sd = ImageDraw.Draw(shadow_layer)
     for line, x, y in positions:
