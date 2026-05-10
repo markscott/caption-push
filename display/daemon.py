@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import numpy as np
 import zmq
 
 # Allow running as both `python display/daemon.py` and `python -m display.daemon`
@@ -15,6 +16,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from PIL import Image as PILImage
 
 from display.renderer import RenderConfig, render_blank, render_identify, render_text
+
+
+def _apply_brightness(img: PILImage.Image, level: int) -> PILImage.Image:
+    """Scale all pixel values by level/100 — works for LCD software dimming."""
+    if level >= 100:
+        return img
+    arr = np.asarray(img, dtype=np.float32)
+    arr *= level / 100.0
+    return PILImage.fromarray(arr.astype(np.uint8))
 
 SCROLL_SPEED_PX_S = 300.0  # pixels per second during scroll
 SCROLL_DELAY_S    = 1.0    # pause before scrolling begins
@@ -129,6 +139,10 @@ def main() -> None:
     scroll_anim: _ScrollAnim | None = None
     t_clear: float | None = None  # monotonic time for auto-clear; None = no pending clear
     preload_cache: _PreloadCache | None = None
+    current_brightness: int = args.brightness
+
+    def show_img(img: PILImage.Image) -> None:
+        matrix.set_image(_apply_brightness(img, current_brightness))
 
     try:
         while True:
@@ -168,11 +182,11 @@ def main() -> None:
                                 t_scroll_start=time.monotonic() + SCROLL_DELAY_S,
                             )
                             t_clear = None
-                            matrix.set_image(_scroll_crop(img, 0, base_config.width, base_config.height))
+                            show_img(_scroll_crop(img, 0, base_config.width, base_config.height))
                         else:
                             scroll_anim = None
                             t_clear = time.monotonic() + AUTO_CLEAR_S
-                            matrix.set_image(img)
+                            show_img(img)
 
                 elif cmd == "preload":
                     text = msg.get("text", "")
@@ -204,18 +218,19 @@ def main() -> None:
                     t_clear = None
                     preload_cache = None
                     identify_until = 0.0
-                    matrix.set_image(render_blank(base_config))
+                    show_img(render_blank(base_config))
                     print(f"{tag} clear")
 
                 elif cmd == "brightness":
                     level = int(msg.get("level", 60))
-                    matrix.set_brightness(level)
+                    current_brightness = level
+                    matrix.set_brightness(level)  # hardware brightness for real LED matrices
                     print(f"{tag} brightness → {level}")
 
                 elif cmd == "identify":
                     target = msg.get("id")
                     if target is None or target == args.display_id:
-                        matrix.set_image(render_identify(args.display_id, base_config))
+                        show_img(render_identify(args.display_id, base_config))
                         identify_until = time.monotonic() + 2.0
                         print(f"{tag} identify flash")
 
@@ -236,11 +251,11 @@ def main() -> None:
                         t_scroll_start=time.monotonic() + SCROLL_DELAY_S,
                     )
                     t_clear = None
-                    matrix.set_image(_scroll_crop(img, 0, base_config.width, base_config.height))
+                    show_img(_scroll_crop(img, 0, base_config.width, base_config.height))
                 else:
                     scroll_anim = None
                     t_clear = time.monotonic() + AUTO_CLEAR_S
-                    matrix.set_image(img)
+                    show_img(img)
 
             # ---- Advance scroll animation ----
             if scroll_anim is not None and identify_until == 0.0:
@@ -250,7 +265,7 @@ def main() -> None:
                     max_offset = scroll_anim.wide_img.width - base_config.width
                     new_offset = min(SCROLL_SPEED_PX_S * elapsed, max_offset)
                     scroll_anim.offset = new_offset
-                    matrix.set_image(
+                    show_img(
                         _scroll_crop(scroll_anim.wide_img, int(new_offset),
                                      base_config.width, base_config.height)
                     )
@@ -263,7 +278,7 @@ def main() -> None:
                 t_clear = None
                 current_text = ""
                 scroll_anim = None
-                matrix.set_image(render_blank(base_config))
+                show_img(render_blank(base_config))
                 print(f"{tag} auto-clear")
 
             # ---- Render frame ----
@@ -274,7 +289,7 @@ def main() -> None:
     except KeyboardInterrupt:
         print(f"\n{tag} shutting down")
     finally:
-        matrix.set_image(render_blank(base_config))
+        show_img(render_blank(base_config))
         matrix.stop()
         socket.close()
         context.term()

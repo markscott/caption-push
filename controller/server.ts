@@ -63,7 +63,7 @@ wss.on('connection', (ws: WebSocket) => {
           await zmqSend({
             cmd: 'show',
             text: msg.text,
-            color: msg.color ?? '#FFFFFF',
+            color: msg.color ?? '#DCDCD2',
             align: msg.align ?? 'center',
           })
           break
@@ -71,7 +71,7 @@ wss.on('connection', (ws: WebSocket) => {
           await zmqSend({
             cmd: 'preload',
             text: msg.text,
-            color: msg.color ?? '#FFFFFF',
+            color: msg.color ?? '#DCDCD2',
             align: msg.align ?? 'center',
           })
           break

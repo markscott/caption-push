@@ -83,7 +83,7 @@ export function SimDisplay({ text }: Props) {
       if (scrollEnd !== null && (now - scrollEnd) / 1000 >= AUTO_CLEAR_S) return
 
       ctx.font      = fontStr(fontSize)
-      ctx.fillStyle = '#fff'
+      ctx.fillStyle = '#dcdcd2'
 
       if (!needsScroll || maxOff <= 0) {
         // Static — centered

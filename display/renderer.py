@@ -17,7 +17,7 @@ class RenderConfig:
     height: int = 64
     font_path: str = "default"
     font_size: int = 24
-    color: tuple[int, int, int] = field(default_factory=lambda: (255, 255, 255))
+    color: tuple[int, int, int] = field(default_factory=lambda: (220, 220, 210))
     halign: str = "center"
     valign: str = "center"
     max_lines: int = 2  # kept for API compatibility; layout is driven by word count
