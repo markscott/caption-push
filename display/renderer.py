@@ -7,7 +7,8 @@ from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 LINE_SPACING = 4   # px between lines (unused now, kept for render_identify)
 PADDING_X = 4      # px horizontal padding
 WORD_LIMIT = 20    # words beyond this are dropped
-MIN_FONT_RATIO = 0.60   # font height floor as fraction of panel height; below this → scroll
+MIN_FONT_RATIO = 0.60   # font height floor as fraction of panel height
+MIN_FONT_MARGIN_PX = 50  # allow font to shrink this many px below the ratio floor before scrolling
 
 
 @dataclass
@@ -98,7 +99,7 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
     _probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
 
     joined = " ".join(text.split()[:WORD_LIMIT])
-    min_font_size = max(8, int(config.height * MIN_FONT_RATIO))
+    min_font_size = max(8, int(config.height * MIN_FONT_RATIO) - MIN_FONT_MARGIN_PX)
 
     font, fitted_size = _scale_to_fit_one(joined, config, _probe)
     if fitted_size < min_font_size:

@@ -91,6 +91,13 @@ export default function App() {
       }
       setCurrentIdx(idx)
       setStatusMsg(`Line ${idx + 1} of ${lines.length}`)
+      // Always ensure the target scene is expanded
+      setCollapsedScenes((prev) => {
+        if (!prev.has(line.sceneId)) return prev
+        const s = new Set(prev)
+        s.delete(line.sceneId)
+        return s
+      })
     },
     [lines, send]
   )
@@ -99,13 +106,13 @@ export default function App() {
     let next = currentIdx + 1
     while (next < lines.length && lines[next].isMetadata) next++
     if (next >= lines.length) return
+    // Collapse the scene we're leaving (showLine will expand the new one)
     const fromScene = currentIdx >= 0 ? lines[currentIdx].sceneId : -1
     const toScene = lines[next].sceneId
-    if (fromScene !== toScene && fromScene >= 0) {
+    if (fromScene >= 0 && fromScene !== toScene) {
       setCollapsedScenes((prev) => {
         const s = new Set(prev)
         s.add(fromScene)
-        s.delete(toScene)
         return s
       })
     }
@@ -116,12 +123,6 @@ export default function App() {
     let prev = currentIdx - 1
     while (prev >= 0 && lines[prev].isMetadata) prev--
     if (prev < 0) return
-    const toScene = lines[prev].sceneId
-    setCollapsedScenes((prev) => {
-      const s = new Set(prev)
-      s.delete(toScene)
-      return s
-    })
     showLine(prev)
   }, [currentIdx, lines, showLine])
 
@@ -210,7 +211,11 @@ export default function App() {
 
   // ---- Derived display values ----
   const currentLine = currentIdx >= 0 ? lines[currentIdx] : null
-  const nextLine = currentIdx + 1 < lines.length ? lines[currentIdx + 1] : null
+  const nextLine = (() => {
+    let idx = currentIdx + 1
+    while (idx < lines.length && lines[idx].isMetadata) idx++
+    return idx < lines.length ? lines[idx] : null
+  })()
 
   return (
     <div className="app">
