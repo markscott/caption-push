@@ -67,6 +67,14 @@ wss.on('connection', (ws: WebSocket) => {
             align: msg.align ?? 'center',
           })
           break
+        case 'preload':
+          await zmqSend({
+            cmd: 'preload',
+            text: msg.text,
+            color: msg.color ?? '#FFFFFF',
+            align: msg.align ?? 'center',
+          })
+          break
         case 'clear':
           await zmqSend({ cmd: 'clear' })
           break

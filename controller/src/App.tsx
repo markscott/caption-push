@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CaptionLine, ClientMessage, ServerMessage } from './types'
 import { parseScript } from './scriptParser'
+import { SimDisplay } from './SimDisplay'
 
 const WS_URL = import.meta.env.DEV
   ? 'ws://localhost:3001/ws'
@@ -88,6 +89,12 @@ export default function App() {
       if (!line.isMetadata) {
         send({ type: 'show', text: line.text })
         setDisplayedText(line.text)
+        // Preload the next displayable line so the display can render it in the background
+        let nextIdx = idx + 1
+        while (nextIdx < lines.length && lines[nextIdx].isMetadata) nextIdx++
+        if (nextIdx < lines.length) {
+          send({ type: 'preload', text: lines[nextIdx].text })
+        }
       }
       setCurrentIdx(idx)
       setStatusMsg(`Line ${idx + 1} of ${lines.length}`)
@@ -136,7 +143,7 @@ export default function App() {
   useEffect(() => {
     if (currentIdx < 0 || !listRef.current) return
     const el = listRef.current.querySelector(`[data-line-idx="${currentIdx}"]`) as HTMLElement | null
-    el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    el?.scrollIntoView({ block: 'center', behavior: 'smooth' })
   }, [currentIdx])
 
   // ---- Keyboard shortcuts ----
@@ -311,9 +318,7 @@ export default function App() {
       <div className="main-area">
         <div className="now-showing">
           <div className="section-label">Now Showing</div>
-          <div className={`current-text ${displayedText === null ? 'empty' : ''}`}>
-            {displayedText ?? '—'}
-          </div>
+          <SimDisplay text={displayedText} />
         </div>
 
         <div className="next-up">

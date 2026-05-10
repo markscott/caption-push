@@ -22,6 +22,14 @@ AUTO_CLEAR_S      = 10.0   # seconds after content is fully shown before auto-cl
 
 
 @dataclass
+class _PreloadCache:
+    text: str
+    color: tuple[int, int, int]
+    halign: str
+    img: PILImage.Image
+
+
+@dataclass
 class _ScrollAnim:
     wide_img: PILImage.Image
     t_scroll_start: float   # monotonic time when scrolling begins
@@ -120,6 +128,7 @@ def main() -> None:
     identify_until: float = 0.0   # monotonic timestamp; >0 means identify is active
     scroll_anim: _ScrollAnim | None = None
     t_clear: float | None = None  # monotonic time for auto-clear; None = no pending clear
+    preload_cache: _PreloadCache | None = None
 
     try:
         while True:
@@ -131,6 +140,7 @@ def main() -> None:
                 if cmd == "show":
                     current_text = msg.get("text", "")
                     color = _hex_to_rgb(msg.get("color", "#FFFFFF"))
+                    halign = msg.get("align", "center")
                     current_config = RenderConfig(
                         width=base_config.width,
                         height=base_config.height,
@@ -138,27 +148,61 @@ def main() -> None:
                         font_size=base_config.font_size,
                         max_lines=base_config.max_lines,
                         color=color,
-                        halign=msg.get("align", "center"),
+                        halign=halign,
                     )
                     if identify_until == 0.0:
-                        img = render_text(current_text, current_config)
+                        # Use preloaded image if it matches exactly
+                        if (preload_cache is not None
+                                and preload_cache.text == current_text
+                                and preload_cache.color == color
+                                and preload_cache.halign == halign):
+                            img = preload_cache.img
+                            print(f"{tag} show (cache hit): {current_text!r}")
+                        else:
+                            img = render_text(current_text, current_config)
+                            print(f"{tag} show (rendered): {current_text!r}")
+                        preload_cache = None
                         if img.width > base_config.width:
                             scroll_anim = _ScrollAnim(
                                 wide_img=img,
                                 t_scroll_start=time.monotonic() + SCROLL_DELAY_S,
                             )
-                            t_clear = None  # set after scroll completes
+                            t_clear = None
                             matrix.set_image(_scroll_crop(img, 0, base_config.width, base_config.height))
                         else:
                             scroll_anim = None
                             t_clear = time.monotonic() + AUTO_CLEAR_S
                             matrix.set_image(img)
-                    print(f"{tag} show: {current_text!r}")
+
+                elif cmd == "preload":
+                    text = msg.get("text", "")
+                    color = _hex_to_rgb(msg.get("color", "#FFFFFF"))
+                    halign = msg.get("align", "center")
+                    if text:
+                        cfg = RenderConfig(
+                            width=base_config.width,
+                            height=base_config.height,
+                            font_path=base_config.font_path,
+                            font_size=base_config.font_size,
+                            max_lines=base_config.max_lines,
+                            color=color,
+                            halign=halign,
+                        )
+                        preload_cache = _PreloadCache(
+                            text=text,
+                            color=color,
+                            halign=halign,
+                            img=render_text(text, cfg),
+                        )
+                        print(f"{tag} preloaded: {text!r}")
+                    else:
+                        preload_cache = None
 
                 elif cmd == "clear":
                     current_text = ""
                     scroll_anim = None
                     t_clear = None
+                    preload_cache = None
                     identify_until = 0.0
                     matrix.set_image(render_blank(base_config))
                     print(f"{tag} clear")

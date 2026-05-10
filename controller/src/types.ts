@@ -9,6 +9,7 @@ export interface CaptionLine {
 
 export type ClientMessage =
   | { type: 'show'; text: string; color?: string; align?: string }
+  | { type: 'preload'; text: string; color?: string; align?: string }
   | { type: 'clear' }
   | { type: 'brightness'; level: number }
   | { type: 'identify'; id?: number }

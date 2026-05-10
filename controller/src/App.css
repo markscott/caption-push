@@ -227,9 +227,20 @@ body {
 
 .now-showing {
   background: var(--current);
-  padding: 20px 24px 18px;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+}
+
+.now-showing .section-label {
+  padding: 8px 24px 4px;
+}
+
+.sim-display {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+  border-top: 1px solid #111;
 }
 
 .section-label {
@@ -240,16 +251,6 @@ body {
   color: var(--dim);
   margin-bottom: 8px;
 }
-
-.current-text {
-  font-size: 32px;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--text);
-  word-break: break-word;
-}
-
-.current-text.empty { color: var(--dim); font-style: italic; font-weight: 400; }
 
 .next-up {
   background: var(--surface);

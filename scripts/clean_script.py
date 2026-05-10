@@ -96,6 +96,37 @@ def is_char_name(s: str) -> bool:
     )
 
 
+# Abbreviations that end with a period but should NOT trigger a line split
+ABBREV_RE = re.compile(
+    r"\b(Mr|Mrs|Ms|Dr|St|Jr|Sr|Lt|Sgt|No|vs|etc|a\.m|p\.m)\.$",
+    re.IGNORECASE,
+)
+
+
+def split_dialogue(line: str) -> list[str]:
+    """Split a dialogue line at commas and sentence-ending periods."""
+    # Split after every comma or period that is followed by whitespace
+    raw = re.split(r"(?<=[,\.]) +", line)
+    # Re-join any part that ended with a known abbreviation (was split in error)
+    merged: list[str] = []
+    for part in raw:
+        if merged and ABBREV_RE.search(merged[-1]):
+            merged[-1] = merged[-1] + " " + part
+        else:
+            merged.append(part)
+    return [p.strip() for p in merged if p.strip()]
+
+
+def split_dialogue_lines(lines: list[str]) -> list[str]:
+    out: list[str] = []
+    for line in lines:
+        if line and not line.startswith("##"):
+            out.extend(split_dialogue(line))
+        else:
+            out.append(line)
+    return out
+
+
 def strip_quotes(s: str) -> str:
     if len(s) >= 2 and s[0] in ('"', '“') and s[-1] in ('"', '”'):
         return s[1:-1]
@@ -228,7 +259,8 @@ def main() -> None:
     raw_lines = INPUT.read_text(encoding="utf-8").splitlines()
     unwrapped = unwrap(raw_lines)
     tagged = tag(unwrapped)
-    final = collapse_blanks(tagged)
+    split = split_dialogue_lines(tagged)
+    final = collapse_blanks(split)
 
     OUTPUT.write_text("\n".join(final).strip() + "\n", encoding="utf-8")
 
