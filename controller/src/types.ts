@@ -3,6 +3,8 @@ export interface CaptionLine {
   text: string
   startMs?: number
   endMs?: number
+  isMetadata?: boolean  // ## lines — shown to operator but never sent to display
+  sceneId: number       // 0 = pre-scene preamble, increments with each ##SCENE line
 }
 
 export type ClientMessage =

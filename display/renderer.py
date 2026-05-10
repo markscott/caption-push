@@ -4,10 +4,10 @@ from dataclasses import dataclass, field, replace
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
 
-LINE_SPACING = 4   # px between lines
+LINE_SPACING = 4   # px between lines (unused now, kept for render_identify)
 PADDING_X = 4      # px horizontal padding
 WORD_LIMIT = 20    # words beyond this are dropped
-TWO_LINE_THRESHOLD = 9  # more than this many words → 2-line layout
+MIN_FONT_RATIO = 0.60   # font height floor as fraction of panel height; below this → scroll
 
 
 @dataclass
@@ -31,18 +31,6 @@ def _load_font(config: RenderConfig) -> ImageFont.FreeTypeFont | ImageFont.Image
     return ImageFont.truetype(config.font_path, config.font_size)
 
 
-def _split_two_lines(words: list[str]) -> tuple[str, str]:
-    """Split word list into two lines as equal in character length as possible."""
-    best_split = max(1, len(words) // 2)
-    best_diff = float('inf')
-    for i in range(1, len(words)):
-        diff = abs(len(" ".join(words[:i])) - len(" ".join(words[i:])))
-        if diff < best_diff:
-            best_diff = diff
-            best_split = i
-    return " ".join(words[:best_split]), " ".join(words[best_split:])
-
-
 def _scale_to_fit_one(
     text: str,
     config: RenderConfig,
@@ -57,31 +45,6 @@ def _scale_to_fit_one(
         font = _load_font(replace(config, font_size=mid))
         bb = draw.textbbox((0, 0), text, font=font)
         if bb[2] - bb[0] <= max_w:
-            best, best_size = font, mid
-            lo = mid + 1
-        else:
-            hi = mid - 1
-    return best, best_size
-
-
-def _scale_to_fit_two(
-    line1: str,
-    line2: str,
-    config: RenderConfig,
-    draw: ImageDraw.ImageDraw,
-) -> tuple[ImageFont.FreeTypeFont | ImageFont.ImageFont, int]:
-    """Binary search for the largest font where both lines fit in width and height."""
-    max_w = config.width - PADDING_X * 2
-    lo, hi = 8, config.font_size
-    best, best_size = _load_font(replace(config, font_size=lo)), lo
-    while lo <= hi:
-        mid = (lo + hi) // 2
-        font = _load_font(replace(config, font_size=mid))
-        bb1 = draw.textbbox((0, 0), line1, font=font)
-        bb2 = draw.textbbox((0, 0), line2, font=font)
-        fits_w = (bb1[2] - bb1[0]) <= max_w and (bb2[2] - bb2[0]) <= max_w
-        total_h = (bb1[3] - bb1[1]) + (bb2[3] - bb2[1]) + LINE_SPACING
-        if fits_w and total_h <= config.height:
             best, best_size = font, mid
             lo = mid + 1
         else:
@@ -122,41 +85,52 @@ def _text_positions(
 
 
 def render_text(text: str, config: RenderConfig) -> Image.Image:
-    img = Image.new("RGB", (config.width, config.height), (0, 0, 0))
+    """Render text to an image.
+
+    When the text is too long to fit at the minimum acceptable font size
+    (MIN_FONT_RATIO * config.height), returns a wide image whose width
+    exceeds config.width.  The caller is responsible for scrolling through it.
+    """
     if not text:
-        return img
+        return Image.new("RGB", (config.width, config.height), (0, 0, 0))
 
-    draw = ImageDraw.Draw(img)
-    words = text.split()[:WORD_LIMIT]
+    # Tiny probe surface — textbbox measurements don't depend on canvas size.
+    _probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
 
-    if len(words) > TWO_LINE_THRESHOLD:
-        line1, line2 = _split_two_lines(words)
-        font, fitted_size = _scale_to_fit_two(line1, line2, config, draw)
-        lines = [line1, line2]
+    joined = " ".join(text.split()[:WORD_LIMIT])
+    min_font_size = max(8, int(config.height * MIN_FONT_RATIO))
+
+    font, fitted_size = _scale_to_fit_one(joined, config, _probe)
+    if fitted_size < min_font_size:
+        font = _load_font(replace(config, font_size=min_font_size))
+        fitted_size = min_font_size
+        bb = _probe.textbbox((0, 0), joined, font=font)
+        canvas_w = (bb[2] - bb[0]) + PADDING_X * 2
+        render_config = replace(config, width=canvas_w, halign="left")
     else:
-        joined = " ".join(words)
-        font, fitted_size = _scale_to_fit_one(joined, config, draw)
-        lines = [joined]
+        render_config = config
+    lines = [joined]
 
     shadow_offset = max(3, fitted_size // 36)
     shadow_blur   = max(2, fitted_size // 48)
 
-    bboxes = [draw.textbbox((0, 0), line, font=font) for line in lines]
-    positions = _text_positions(lines, bboxes, config)
+    canvas = Image.new("RGB", (render_config.width, config.height), (0, 0, 0))
+    bboxes = [_probe.textbbox((0, 0), line, font=font) for line in lines]
+    positions = _text_positions(lines, bboxes, render_config)
 
     shadow_color = tuple(max(40, c // 6) for c in config.color)
-    shadow_layer = Image.new("RGB", img.size, (0, 0, 0))
+    shadow_layer = Image.new("RGB", canvas.size, (0, 0, 0))
     sd = ImageDraw.Draw(shadow_layer)
     for line, x, y in positions:
         sd.text((x + shadow_offset, y + shadow_offset), line, font=font, fill=shadow_color)
     shadow_layer = shadow_layer.filter(ImageFilter.GaussianBlur(radius=shadow_blur))
-    img = ImageChops.add(img, shadow_layer)
+    canvas = ImageChops.add(canvas, shadow_layer)
 
-    draw = ImageDraw.Draw(img)
+    d = ImageDraw.Draw(canvas)
     for line, x, y in positions:
-        draw.text((x, y), line, font=font, fill=config.color)
+        d.text((x, y), line, font=font, fill=config.color)
 
-    return img
+    return canvas  # width > config.width → caller must scroll
 
 
 def render_blank(config: RenderConfig) -> Image.Image:

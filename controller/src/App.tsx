@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { CaptionLine, ClientMessage, ServerMessage } from './types'
 import { parseScript } from './scriptParser'
 
@@ -13,6 +13,8 @@ export default function App() {
   const [manualText, setManualText] = useState<string>('')
   const [connected, setConnected] = useState<boolean>(false)
   const [statusMsg, setStatusMsg] = useState<string>('No script loaded')
+  const [displayedText, setDisplayedText] = useState<string | null>(null)
+  const [collapsedScenes, setCollapsedScenes] = useState<Set<number>>(new Set())
 
   const wsRef = useRef<WebSocket | null>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -54,11 +56,39 @@ export default function App() {
     }
   }, [])
 
+  // ---- Scene grouping ----
+  const sceneGroups = useMemo(() => {
+    const groups: { sceneId: number; entries: { line: CaptionLine; idx: number }[] }[] = []
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i]
+      const last = groups[groups.length - 1]
+      if (!last || last.sceneId !== line.sceneId) {
+        groups.push({ sceneId: line.sceneId, entries: [{ line, idx: i }] })
+      } else {
+        last.entries.push({ line, idx: i })
+      }
+    }
+    return groups
+  }, [lines])
+
+  const toggleScene = useCallback((sceneId: number) => {
+    setCollapsedScenes((prev) => {
+      const next = new Set(prev)
+      if (next.has(sceneId)) next.delete(sceneId)
+      else next.add(sceneId)
+      return next
+    })
+  }, [])
+
   // ---- Script navigation ----
   const showLine = useCallback(
     (idx: number) => {
       if (idx < 0 || idx >= lines.length) return
-      send({ type: 'show', text: lines[idx].text })
+      const line = lines[idx]
+      if (!line.isMetadata) {
+        send({ type: 'show', text: line.text })
+        setDisplayedText(line.text)
+      }
       setCurrentIdx(idx)
       setStatusMsg(`Line ${idx + 1} of ${lines.length}`)
     },
@@ -66,23 +96,45 @@ export default function App() {
   )
 
   const advance = useCallback(() => {
-    const next = Math.min(currentIdx + 1, lines.length - 1)
-    if (next !== currentIdx || currentIdx === -1) showLine(next === -1 ? 0 : next)
-  }, [currentIdx, lines.length, showLine])
+    let next = currentIdx + 1
+    while (next < lines.length && lines[next].isMetadata) next++
+    if (next >= lines.length) return
+    const fromScene = currentIdx >= 0 ? lines[currentIdx].sceneId : -1
+    const toScene = lines[next].sceneId
+    if (fromScene !== toScene && fromScene >= 0) {
+      setCollapsedScenes((prev) => {
+        const s = new Set(prev)
+        s.add(fromScene)
+        s.delete(toScene)
+        return s
+      })
+    }
+    showLine(next)
+  }, [currentIdx, lines, showLine])
 
   const retreat = useCallback(() => {
-    if (currentIdx > 0) showLine(currentIdx - 1)
-  }, [currentIdx, showLine])
+    let prev = currentIdx - 1
+    while (prev >= 0 && lines[prev].isMetadata) prev--
+    if (prev < 0) return
+    const toScene = lines[prev].sceneId
+    setCollapsedScenes((prev) => {
+      const s = new Set(prev)
+      s.delete(toScene)
+      return s
+    })
+    showLine(prev)
+  }, [currentIdx, lines, showLine])
 
   const clearDisplay = useCallback(() => {
     send({ type: 'clear' })
+    setDisplayedText(null)
     setStatusMsg('Display cleared')
   }, [send])
 
   // ---- Auto-scroll script list to current line ----
   useEffect(() => {
     if (currentIdx < 0 || !listRef.current) return
-    const el = listRef.current.children[currentIdx] as HTMLElement | undefined
+    const el = listRef.current.querySelector(`[data-line-idx="${currentIdx}"]`) as HTMLElement | null
     el?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [currentIdx])
 
@@ -120,6 +172,7 @@ export default function App() {
       const parsed = parseScript(file.name, ev.target?.result as string)
       setLines(parsed)
       setCurrentIdx(-1)
+      setCollapsedScenes(new Set(parsed.map((l) => l.sceneId).filter((id) => id > 0)))
       setStatusMsg(`Loaded "${file.name}" — ${parsed.length} lines. Space / ↓ to advance.`)
     }
     reader.readAsText(file)
@@ -140,6 +193,7 @@ export default function App() {
     if (!text) return
     send({ type: 'show', text })
     setManualText('')
+    setDisplayedText(text)
     setStatusMsg(`Manual: "${text}"`)
   }
 
@@ -200,21 +254,46 @@ export default function App() {
       {/* ---- Script Panel ---- */}
       <div className="script-panel">
         <div className="script-panel-header">
-          Script — {lines.length} lines
+          <span>Script — {lines.length} lines</span>
+          {sceneGroups.some((g) => g.sceneId > 0) && (
+            <span className="scene-controls">
+              <button onClick={() => setCollapsedScenes(new Set())}>All ▼</button>
+              <button onClick={() => setCollapsedScenes(new Set(sceneGroups.filter((g) => g.sceneId > 0).map((g) => g.sceneId)))}>All ▶</button>
+            </span>
+          )}
         </div>
         <div className="script-list" ref={listRef}>
-          {lines.map((line, idx) => (
-            <div
-              key={line.index}
-              className={`script-line ${
-                idx === currentIdx ? 'current' : idx < currentIdx ? 'past' : ''
-              }`}
-              onClick={() => showLine(idx)}
-            >
-              <span className="line-num">{line.index}</span>
-              <span>{line.text}</span>
-            </div>
-          ))}
+          {sceneGroups.map(({ sceneId, entries }) => {
+            const hasHeader = sceneId > 0
+            const headerEntry = hasHeader ? entries[0] : null
+            const bodyEntries = hasHeader ? entries.slice(1) : entries
+            const isCollapsed = collapsedScenes.has(sceneId)
+            const sceneTitle = headerEntry?.line.text.replace(/^##SCENE[:\s]*/i, '').trim() ?? ''
+            return (
+              <div key={sceneId} className="scene-group">
+                {hasHeader && (
+                  <div
+                    className={`scene-header ${isCollapsed ? 'collapsed' : ''}`}
+                    onClick={() => toggleScene(sceneId)}
+                  >
+                    <span className="scene-chevron">{isCollapsed ? '▶' : '▼'}</span>
+                    <span className="scene-title">{sceneTitle}</span>
+                  </div>
+                )}
+                {!isCollapsed && bodyEntries.map(({ line, idx }) => (
+                  <div
+                    key={line.index}
+                    data-line-idx={idx}
+                    className={`script-line ${line.isMetadata ? 'metadata' : idx === currentIdx ? 'current' : idx < currentIdx ? 'past' : ''}`}
+                    onClick={() => !line.isMetadata && showLine(idx)}
+                  >
+                    <span className="line-num">{line.index}</span>
+                    <span>{line.text}</span>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
           {lines.length === 0 && (
             <div style={{ padding: '16px 12px', color: 'var(--dim)', fontSize: 13 }}>
               Load a .srt or .txt script to begin.
@@ -227,8 +306,8 @@ export default function App() {
       <div className="main-area">
         <div className="now-showing">
           <div className="section-label">Now Showing</div>
-          <div className={`current-text ${!currentLine ? 'empty' : ''}`}>
-            {currentLine?.text ?? '—'}
+          <div className={`current-text ${displayedText === null ? 'empty' : ''}`}>
+            {displayedText ?? '—'}
           </div>
         </div>
 

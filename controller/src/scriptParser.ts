@@ -32,11 +32,17 @@ function parseSrt(content: string): CaptionLine[] {
 }
 
 function parsePlaintext(content: string): CaptionLine[] {
+  let sceneId = 0
+  let lineIndex = 0
   return content
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean)
-    .map((text, i) => ({ index: i + 1, text }))
+    .map((text) => {
+      const isMetadata = text.startsWith('##')
+      if (/^##SCENE\b/i.test(text)) sceneId++
+      return { index: ++lineIndex, text, isMetadata, sceneId }
+    })
 }
 
 function srtToMs(time: string): number {

@@ -4,6 +4,7 @@ import argparse
 import platform
 import sys
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import zmq
@@ -11,7 +12,25 @@ import zmq
 # Allow running as both `python display/daemon.py` and `python -m display.daemon`
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from PIL import Image as PILImage
+
 from display.renderer import RenderConfig, render_blank, render_identify, render_text
+
+SCROLL_SPEED_PX_S = 300.0  # pixels per second during scroll
+SCROLL_DELAY_S    = 1.0    # pause before scrolling begins
+AUTO_CLEAR_S      = 10.0   # seconds after content is fully shown before auto-clear
+
+
+@dataclass
+class _ScrollAnim:
+    wide_img: PILImage.Image
+    t_scroll_start: float   # monotonic time when scrolling begins
+    offset: float = 0.0     # current scroll position in px
+
+
+def _scroll_crop(wide: PILImage.Image, offset: int, w: int, h: int) -> PILImage.Image:
+    left = max(0, min(offset, wide.width - w))
+    return wide.crop((left, 0, left + w, h))
 
 
 def _is_raspberry_pi() -> bool:
@@ -98,7 +117,9 @@ def main() -> None:
 
     current_text: str = ""
     current_config = base_config
-    identify_until: float = 0.0  # monotonic timestamp; >0 means identify is active
+    identify_until: float = 0.0   # monotonic timestamp; >0 means identify is active
+    scroll_anim: _ScrollAnim | None = None
+    t_clear: float | None = None  # monotonic time for auto-clear; None = no pending clear
 
     try:
         while True:
@@ -120,11 +141,24 @@ def main() -> None:
                         halign=msg.get("align", "center"),
                     )
                     if identify_until == 0.0:
-                        matrix.set_image(render_text(current_text, current_config))
+                        img = render_text(current_text, current_config)
+                        if img.width > base_config.width:
+                            scroll_anim = _ScrollAnim(
+                                wide_img=img,
+                                t_scroll_start=time.monotonic() + SCROLL_DELAY_S,
+                            )
+                            t_clear = None  # set after scroll completes
+                            matrix.set_image(_scroll_crop(img, 0, base_config.width, base_config.height))
+                        else:
+                            scroll_anim = None
+                            t_clear = time.monotonic() + AUTO_CLEAR_S
+                            matrix.set_image(img)
                     print(f"{tag} show: {current_text!r}")
 
                 elif cmd == "clear":
                     current_text = ""
+                    scroll_anim = None
+                    t_clear = None
                     identify_until = 0.0
                     matrix.set_image(render_blank(base_config))
                     print(f"{tag} clear")
@@ -152,7 +186,41 @@ def main() -> None:
                     if current_text
                     else render_blank(base_config)
                 )
-                matrix.set_image(img)
+                if img.width > base_config.width:
+                    scroll_anim = _ScrollAnim(
+                        wide_img=img,
+                        t_scroll_start=time.monotonic() + SCROLL_DELAY_S,
+                    )
+                    t_clear = None
+                    matrix.set_image(_scroll_crop(img, 0, base_config.width, base_config.height))
+                else:
+                    scroll_anim = None
+                    t_clear = time.monotonic() + AUTO_CLEAR_S
+                    matrix.set_image(img)
+
+            # ---- Advance scroll animation ----
+            if scroll_anim is not None and identify_until == 0.0:
+                now = time.monotonic()
+                if now >= scroll_anim.t_scroll_start:
+                    elapsed = now - scroll_anim.t_scroll_start
+                    max_offset = scroll_anim.wide_img.width - base_config.width
+                    new_offset = min(SCROLL_SPEED_PX_S * elapsed, max_offset)
+                    scroll_anim.offset = new_offset
+                    matrix.set_image(
+                        _scroll_crop(scroll_anim.wide_img, int(new_offset),
+                                     base_config.width, base_config.height)
+                    )
+                    if new_offset >= max_offset:
+                        scroll_anim = None
+                        t_clear = time.monotonic() + AUTO_CLEAR_S
+
+            # ---- Auto-clear ----
+            if t_clear is not None and time.monotonic() >= t_clear:
+                t_clear = None
+                current_text = ""
+                scroll_anim = None
+                matrix.set_image(render_blank(base_config))
+                print(f"{tag} auto-clear")
 
             # ---- Render frame ----
             if not matrix.render_frame():

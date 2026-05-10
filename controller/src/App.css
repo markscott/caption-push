@@ -118,7 +118,27 @@ body {
   letter-spacing: 0.08em;
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
+
+.scene-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.scene-controls button {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--dim);
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 10px;
+  cursor: pointer;
+  letter-spacing: 0;
+}
+.scene-controls button:hover { color: var(--text); border-color: var(--dim); }
 
 .script-list {
   flex: 1;
@@ -150,6 +170,41 @@ body {
 }
 
 .script-line.past { color: var(--dim); }
+
+/* ---- Scene grouping ---- */
+.scene-group + .scene-group { border-top: 1px solid var(--border); }
+
+.scene-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  cursor: pointer;
+  user-select: none;
+  background: var(--panel);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.scene-header:hover { background: var(--surface); }
+.scene-header.collapsed { color: var(--dim); }
+
+.scene-chevron { font-size: 9px; flex-shrink: 0; }
+.scene-title { flex: 1; }
+
+.script-line.metadata {
+  color: var(--yellow);
+  font-size: 11px;
+  font-style: italic;
+  cursor: default;
+  border-left-color: transparent !important;
+  background: none !important;
+}
 
 .line-num {
   color: var(--dim);
