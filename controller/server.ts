@@ -10,7 +10,7 @@
  * Prod:   node server.js           (port 3000, serves React + WS)
  */
 
-import { createServer } from 'http'
+import { createServer, request as httpRequest } from 'http'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import express from 'express'
@@ -34,6 +34,24 @@ async function zmqSend(payload: Record<string, unknown>): Promise<void> {
 // ---- HTTP + WebSocket server ----
 const app = express()
 app.use(express.json())
+
+// Proxy MJPEG preview stream from display1 to the operator browser
+const PREVIEW_HOST = process.env.PREVIEW_HOST ?? 'display1'
+const PREVIEW_PORT = parseInt(process.env.PREVIEW_PORT ?? '7777')
+
+app.get('/preview/stream', (req, res) => {
+  const proxy = httpRequest({ hostname: PREVIEW_HOST, port: PREVIEW_PORT, path: '/stream' }, (upstream) => {
+    res.writeHead(200, {
+      'Content-Type': upstream.headers['content-type'] ?? 'multipart/x-mixed-replace; boundary=frame',
+      'Cache-Control': 'no-cache',
+      'X-Accel-Buffering': 'no',
+    })
+    upstream.pipe(res)
+    req.on('close', () => upstream.destroy())
+  })
+  proxy.on('error', () => { if (!res.headersSent) res.status(503).send('display unavailable') })
+  proxy.end()
+})
 
 // Serve LiberationSans font so SimDisplay canvas can match the display renderer
 app.use('/fonts', express.static('/usr/share/fonts/truetype/liberation'))

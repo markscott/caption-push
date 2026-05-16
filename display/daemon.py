@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import argparse
+import io
 import platform
 import sys
+import threading
 import time
 from dataclasses import dataclass, field
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 import zmq
@@ -44,6 +47,57 @@ def _scroll_crop(wide: PILImage.Image, offset: int, w: int, h: int) -> PILImage.
 
 def _is_raspberry_pi() -> bool:
     return platform.machine() in ("armv7l", "aarch64", "armv6l")
+
+
+# ---- MJPEG preview server (operator UI polls this for exact PIL output) ----
+
+_preview_jpeg: bytes = b''
+_preview_version: int = 0
+_preview_lock = threading.Lock()
+
+
+def _update_preview(img: PILImage.Image) -> None:
+    global _preview_jpeg, _preview_version
+    thumb = img.resize((img.width // 2, img.height // 2))
+    buf = io.BytesIO()
+    thumb.save(buf, format='JPEG', quality=80)
+    with _preview_lock:
+        _preview_jpeg = buf.getvalue()
+        _preview_version += 1
+
+
+class _MjpegHandler(BaseHTTPRequestHandler):
+    def do_GET(self) -> None:
+        self.send_response(200)
+        self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
+        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        last_ver = -1
+        while True:
+            with _preview_lock:
+                ver, frame = _preview_version, _preview_jpeg
+            if frame and ver != last_ver:
+                last_ver = ver
+                try:
+                    header = (
+                        b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: '
+                        + str(len(frame)).encode()
+                        + b'\r\n\r\n'
+                    )
+                    self.wfile.write(header + frame + b'\r\n')
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    break
+            else:
+                time.sleep(0.01)
+
+    def log_message(self, *_args: object) -> None:
+        pass
+
+
+def _start_preview_server(port: int) -> None:
+    ThreadingHTTPServer(('0.0.0.0', port), _MjpegHandler).serve_forever()
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
@@ -117,6 +171,8 @@ def main() -> None:
     # 16ms receive timeout keeps the render loop near 60fps when idle
     socket.setsockopt(zmq.RCVTIMEO, 16)
 
+    threading.Thread(target=_start_preview_server, args=(7777,), daemon=True).start()
+
     matrix.start()
     matrix.set_image(render_blank(base_config))
 
@@ -134,6 +190,7 @@ def main() -> None:
 
     def show_img(img: PILImage.Image) -> None:
         matrix.set_image(img)
+        _update_preview(img)
 
     try:
         while True:
