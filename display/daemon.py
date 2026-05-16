@@ -7,7 +7,6 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import numpy as np
 import zmq
 
 # Allow running as both `python display/daemon.py` and `python -m display.daemon`
@@ -17,14 +16,6 @@ from PIL import Image as PILImage
 
 from display.renderer import RenderConfig, render_blank, render_identify, render_text
 
-
-def _apply_brightness(img: PILImage.Image, level: int) -> PILImage.Image:
-    """Scale all pixel values by level/100 — works for LCD software dimming."""
-    if level >= 100:
-        return img
-    arr = np.asarray(img, dtype=np.float32)
-    arr *= level / 100.0
-    return PILImage.fromarray(arr.astype(np.uint8))
 
 SCROLL_SPEED_PX_S = 300.0  # pixels per second during scroll
 SCROLL_DELAY_S    = 1.0    # pause before scrolling begins
@@ -76,7 +67,7 @@ def main() -> None:
     parser.add_argument("--width", type=int, default=128,
                         help="Total display width in pixels (panel_width * chain_length)")
     parser.add_argument("--height", type=int, default=32)
-    parser.add_argument("--brightness", type=int, default=60)
+    parser.add_argument("--brightness", type=int, default=100)
     parser.add_argument("--font-size", type=int, default=20)
     parser.add_argument("--font-path", type=str, default="default")
     parser.add_argument("--max-lines", type=int, default=1,
@@ -142,7 +133,7 @@ def main() -> None:
     current_brightness: int = args.brightness
 
     def show_img(img: PILImage.Image) -> None:
-        matrix.set_image(_apply_brightness(img, current_brightness))
+        matrix.set_image(img)
 
     try:
         while True:

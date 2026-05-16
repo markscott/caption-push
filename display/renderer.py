@@ -129,7 +129,7 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
 
     d = ImageDraw.Draw(canvas)
     for line, x, y in positions:
-        d.text((x, y), line, font=font, fill=config.color)
+        d.text((x, y), line, font=font, fill=(255, 255, 255))
 
     return canvas  # width > config.width → caller must scroll
 
