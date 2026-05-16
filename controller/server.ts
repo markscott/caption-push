@@ -10,7 +10,8 @@
  * Prod:   node server.js           (port 3000, serves React + WS)
  */
 
-import { createServer, request as httpRequest } from 'http'
+import { createServer } from 'http'
+import { request as httpRequest } from 'http'
 import path from 'path'
 import { fileURLToPath } from 'url'
 import express from 'express'
@@ -39,28 +40,18 @@ app.use(express.json())
 const PREVIEW_HOST = process.env.PREVIEW_HOST ?? 'display1'
 const PREVIEW_PORT = parseInt(process.env.PREVIEW_PORT ?? '7777')
 
-app.get('/preview/stream', (req, res) => {
-  // Kill Nagle on the browser-facing socket so each frame chunk goes out immediately
-  req.socket.setNoDelay(true)
-
-  const proxy = httpRequest({ hostname: PREVIEW_HOST, port: PREVIEW_PORT, path: '/stream' }, (upstream) => {
-    // Kill Nagle on the display-facing socket too
-    upstream.socket?.setNoDelay(true)
-
-    res.writeHead(200, {
-      'Content-Type': 'multipart/x-mixed-replace; boundary=frame',
-      'Cache-Control': 'no-cache',
-      'X-Accel-Buffering': 'no',
-      'Transfer-Encoding': 'chunked',
-    })
-
-    // Explicit data forwarding — don't use pipe() which can introduce buffering
-    upstream.on('data', (chunk: Buffer) => res.write(chunk))
-    upstream.on('end', () => res.end())
-    req.on('close', () => upstream.destroy())
-  })
-  proxy.on('socket', (s) => s.setNoDelay(true))
-  proxy.on('error', () => { if (!res.headersSent) res.status(503).send('display unavailable') })
+// Proxy a single JPEG snapshot from display1 — SimDisplay polls this at ~10fps
+app.get('/preview/frame', (_req, res) => {
+  const proxy = httpRequest(
+    { hostname: PREVIEW_HOST, port: PREVIEW_PORT, path: '/frame', method: 'GET' },
+    (upstream) => {
+      if (upstream.statusCode === 204) { res.status(204).end(); return }
+      res.setHeader('Content-Type', 'image/jpeg')
+      res.setHeader('Cache-Control', 'no-store')
+      upstream.pipe(res)
+    },
+  )
+  proxy.on('error', () => { if (!res.headersSent) res.status(503).end() })
   proxy.end()
 })
 

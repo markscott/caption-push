@@ -3,7 +3,6 @@ from __future__ import annotations
 import argparse
 import io
 import platform
-import socket as _socket
 import sys
 import threading
 import time
@@ -53,62 +52,42 @@ def _is_raspberry_pi() -> bool:
 # ---- MJPEG preview server (operator UI polls this for exact PIL output) ----
 
 _preview_jpeg: bytes = b''
-_preview_version: int = 0
 _preview_lock = threading.Lock()
 
 
 def _update_preview(img: PILImage.Image) -> None:
-    global _preview_jpeg, _preview_version
+    global _preview_jpeg
     thumb = img.resize((img.width // 2, img.height // 2))
     buf = io.BytesIO()
     thumb.save(buf, format='JPEG', quality=80)
     with _preview_lock:
         _preview_jpeg = buf.getvalue()
-        _preview_version += 1
 
 
-class _MjpegHandler(BaseHTTPRequestHandler):
-    # HTTP/1.1 so Node.js HTTP client streams data events immediately
-    protocol_version = 'HTTP/1.1'
+class _FrameHandler(BaseHTTPRequestHandler):
+    """Serves the current rendered frame as a single JPEG — caller polls."""
 
     def do_GET(self) -> None:
-        # Disable Nagle on this connection for minimal frame latency
-        self.connection.setsockopt(_socket.IPPROTO_TCP, _socket.TCP_NODELAY, 1)
+        with _preview_lock:
+            frame = _preview_jpeg
+        if not frame:
+            self.send_response(204)
+            self.end_headers()
+            return
         self.send_response(200)
-        self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
-        self.send_header('Cache-Control', 'no-cache')
+        self.send_header('Content-Type', 'image/jpeg')
+        self.send_header('Content-Length', str(len(frame)))
+        self.send_header('Cache-Control', 'no-store')
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Transfer-Encoding', 'chunked')
         self.end_headers()
-        last_ver = -1
-        while True:
-            with _preview_lock:
-                ver, frame = _preview_version, _preview_jpeg
-            if frame and ver != last_ver:
-                last_ver = ver
-                try:
-                    part = (
-                        b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: '
-                        + str(len(frame)).encode()
-                        + b'\r\n\r\n'
-                        + frame
-                        + b'\r\n'
-                    )
-                    # Write as a single HTTP/1.1 chunk
-                    chunk = hex(len(part)).encode() + b'\r\n' + part + b'\r\n'
-                    self.wfile.write(chunk)
-                    self.wfile.flush()
-                except (BrokenPipeError, ConnectionResetError, OSError):
-                    break
-            else:
-                time.sleep(0.01)
+        self.wfile.write(frame)
 
     def log_message(self, *_args: object) -> None:
         pass
 
 
 def _start_preview_server(port: int) -> None:
-    ThreadingHTTPServer(('0.0.0.0', port), _MjpegHandler).serve_forever()
+    ThreadingHTTPServer(('0.0.0.0', port), _FrameHandler).serve_forever()
 
 
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:

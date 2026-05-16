@@ -1,40 +1,57 @@
 import { useEffect, useRef } from 'react'
 
+const CW = 960
+const CH = 180
+const POLL_MS = 100  // ~10fps preview
+
 interface Props {
   text: string | null
 }
 
-// Shows the actual PIL-rendered frame from the display daemon via MJPEG stream.
-// Pixel-perfect: same font, same sizing, same animation timing as the real display.
 export function SimDisplay({ text: _text }: Props) {
-  const imgRef = useRef<HTMLImageElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
-    const img = imgRef.current
-    if (!img) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')!
 
-    function connect() {
-      if (imgRef.current) {
-        imgRef.current.src = `/preview/stream?t=${Date.now()}`
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, CW, CH)
+
+    let running = true
+    let timer = 0
+
+    async function poll() {
+      if (!running) return
+      try {
+        const res = await fetch(`/preview/frame?t=${Date.now()}`)
+        if (res.ok && res.status !== 204) {
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          const img = new Image()
+          img.onload = () => {
+            if (running) ctx.drawImage(img, 0, 0, CW, CH)
+            URL.revokeObjectURL(url)
+          }
+          img.src = url
+        }
+      } catch {
+        // display unavailable — keep showing last frame
       }
+      if (running) timer = window.setTimeout(poll, POLL_MS)
     }
 
-    connect()
-
-    // Reconnect if the stream drops (e.g. display container restarts)
-    const onError = () => setTimeout(connect, 2000)
-    img.addEventListener('error', onError)
-    return () => {
-      img.removeEventListener('error', onError)
-      img.src = ''
-    }
+    poll()
+    return () => { running = false; clearTimeout(timer) }
   }, [])
 
   return (
-    <img
-      ref={imgRef}
+    <canvas
+      ref={canvasRef}
+      width={CW}
+      height={CH}
       className="sim-display"
-      alt="display preview"
     />
   )
 }
