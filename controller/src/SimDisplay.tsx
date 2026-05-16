@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 // ---- Mirror display renderer + daemon constants exactly ----
 const PANEL_W          = 1920
@@ -23,15 +23,42 @@ const C_PAD_X    = PADDING_X * SCALE
 const C_MAX_TW   = CW - C_PAD_X * 2
 const C_SPEED    = SCROLL_SPEED * SCALE   // canvas px / s
 
+const FONT_FAMILY = 'CaptionFont'
+const FONT_URL    = '/fonts/LiberationSans-Bold.ttf'
+
+// Load the font once at module level; track readiness via a promise
+let fontReady: Promise<void> | null = null
+
+function ensureFontLoaded(): Promise<void> {
+  if (fontReady) return fontReady
+  fontReady = (async () => {
+    try {
+      const face = new FontFace(FONT_FAMILY, `url(${FONT_URL})`)
+      await face.load()
+      document.fonts.add(face)
+    } catch {
+      // Font unavailable (dev without bridge) — fall back to system-ui
+    }
+  })()
+  return fontReady
+}
+
 interface Props {
   text: string | null
 }
 
 export function SimDisplay({ text }: Props) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const rafRef    = useRef<number>(0)
+  const canvasRef  = useRef<HTMLCanvasElement>(null)
+  const rafRef     = useRef<number>(0)
+  const [fontLoaded, setFontLoaded] = useState(false)
 
   useEffect(() => {
+    ensureFontLoaded().then(() => setFontLoaded(true))
+  }, [])
+
+  useEffect(() => {
+    if (!fontLoaded) return
+
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
@@ -48,8 +75,9 @@ export function SimDisplay({ text }: Props) {
     const joined    = text.split(/\s+/).slice(0, WORD_LIMIT).join(' ')
     const startTime = performance.now()
 
+    const fontStr = (sz: number) => `bold ${sz}px '${FONT_FAMILY}', system-ui, Arial, sans-serif`
+
     // ---- Binary search: largest font where text fits in width ----
-    const fontStr = (sz: number) => `bold ${sz}px system-ui, Arial, sans-serif`
     let lo = 4, hi = C_MAX_FONT, fittedSize = lo
     while (lo <= hi) {
       const mid = (lo + hi) >> 1
@@ -110,7 +138,7 @@ export function SimDisplay({ text }: Props) {
 
     rafRef.current = requestAnimationFrame(draw)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [text])
+  }, [text, fontLoaded])
 
   return (
     <canvas

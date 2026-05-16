@@ -35,6 +35,7 @@ services:
       MAX_LINES: "1"
       PIXEL_SIZE: "1"
       PIXEL_GAP: "0"
+      FONT_PATH: "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     depends_on:
       bridge:
         condition: service_healthy
@@ -55,6 +56,7 @@ services:
       MAX_LINES: "1"
       PIXEL_SIZE: "1"
       PIXEL_GAP: "0"
+      FONT_PATH: "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
     depends_on:
       bridge:
         condition: service_healthy

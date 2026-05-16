@@ -35,6 +35,9 @@ async function zmqSend(payload: Record<string, unknown>): Promise<void> {
 const app = express()
 app.use(express.json())
 
+// Serve LiberationSans font so SimDisplay canvas can match the display renderer
+app.use('/fonts', express.static('/usr/share/fonts/truetype/liberation'))
+
 if (!isDev) {
   // Serve Vite build in production
   const distPath = path.join(__dirname, 'dist')

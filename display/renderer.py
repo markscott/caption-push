@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field, replace
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter, ImageFont
+
+_LIBERATION_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+_DEFAULT_FONT_PATH = os.environ.get("FONT_PATH", _LIBERATION_BOLD)
 
 LINE_SPACING = 4   # px between lines (unused now, kept for render_identify)
 PADDING_X = 4      # px horizontal padding
@@ -15,7 +19,7 @@ MIN_FONT_MARGIN_PX = 50  # allow font to shrink this many px below the ratio flo
 class RenderConfig:
     width: int = 128
     height: int = 64
-    font_path: str = "default"
+    font_path: str = field(default_factory=lambda: _DEFAULT_FONT_PATH)
     font_size: int = 24
     color: tuple[int, int, int] = field(default_factory=lambda: (220, 220, 210))
     halign: str = "center"
@@ -24,12 +28,15 @@ class RenderConfig:
 
 
 def _load_font(config: RenderConfig) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    if config.font_path == "default":
-        try:
-            return ImageFont.load_default(size=config.font_size)
-        except TypeError:
-            return ImageFont.load_default()
-    return ImageFont.truetype(config.font_path, config.font_size)
+    import pathlib
+    path = pathlib.Path(config.font_path)
+    if path.exists():
+        return ImageFont.truetype(str(path), config.font_size)
+    # Fallback: PIL built-in bitmap font (no size control)
+    try:
+        return ImageFont.load_default(size=config.font_size)
+    except TypeError:
+        return ImageFont.load_default()
 
 
 def _scale_to_fit_one(
