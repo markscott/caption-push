@@ -20,8 +20,8 @@ from PIL import Image as PILImage
 from display.renderer import RenderConfig, render_blank, render_identify, render_text
 
 
-SCROLL_SPEED_PX_S = 300.0  # pixels per second during scroll
-SCROLL_DELAY_S    = 1.0    # pause before scrolling begins
+SCROLL_SPEED_PX_S = 375.0  # pixels per second during scroll
+SCROLL_DELAY_S    = 1.25   # pause before scrolling begins
 AUTO_CLEAR_S      = 10.0   # seconds after content is fully shown before auto-clear
 
 
