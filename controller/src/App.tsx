@@ -263,12 +263,21 @@ export default function App() {
       <div className="script-panel">
         <div className="script-panel-header">
           <span>Script — {lines.length} lines</span>
-          {sceneGroups.some((g) => g.sceneId > 0) && (
-            <span className="scene-controls">
-              <button onClick={() => setCollapsedScenes(new Set())}>All ▼</button>
-              <button onClick={() => setCollapsedScenes(new Set(sceneGroups.filter((g) => g.sceneId > 0).map((g) => g.sceneId)))}>All ▶</button>
-            </span>
-          )}
+          {sceneGroups.some((g) => g.sceneId > 0) && (() => {
+            const named = sceneGroups.filter((g) => g.sceneId > 0)
+            const allCollapsed = named.every((g) => collapsedScenes.has(g.sceneId))
+            return (
+              <span className="scene-controls">
+                <button onClick={() =>
+                  allCollapsed
+                    ? setCollapsedScenes(new Set())
+                    : setCollapsedScenes(new Set(named.map((g) => g.sceneId)))
+                }>
+                  {allCollapsed ? '▶' : '▼'} All
+                </button>
+              </span>
+            )
+          })()}
         </div>
         <div className="script-list" ref={listRef}>
           {sceneGroups.map(({ sceneId, entries }) => {
