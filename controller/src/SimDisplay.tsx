@@ -18,28 +18,37 @@ const CH    = PANEL_H / 2              // 180
 const SCALE = CH / PANEL_H            // 0.5
 
 // Derived canvas-space constants (all scaled to canvas px)
-const C_MAX_FONT = Math.floor(FONT_SIZE * SCALE)              // 160 — matches PIL hi bound
+const C_MAX_FONT = Math.floor(FONT_SIZE * SCALE)              // 160
 const C_MIN_FONT = Math.max(4, Math.floor((PANEL_H * MIN_FONT_RATIO - MIN_FONT_MARGIN) * SCALE))  // 83
 const C_PAD_X    = PADDING_X * SCALE                          // 2
-const C_MAX_TW   = CW - C_PAD_X * 2                          // 956
+const C_MAX_TW   = CW - C_PAD_X * 2
 const C_SPEED    = SCROLL_SPEED * SCALE                       // 150 canvas px / s
 
 const FONT_FAMILY = 'CaptionFont'
-const FONT_URL    = '/fonts/LiberationSans-Bold.ttf'
 
-// Load font once at module level
-let fontReady: Promise<boolean> | null = null
+// Inject @font-face CSS and return a promise that resolves when canvas can use the font.
+// CSS injection is more reliable for canvas than the FontFace API on all browsers.
+let fontReady: Promise<void> | null = null
 
-function ensureFontLoaded(): Promise<boolean> {
+function ensureFontLoaded(): Promise<void> {
   if (fontReady) return fontReady
   fontReady = (async () => {
+    const style = document.createElement('style')
+    style.textContent = `
+      @font-face {
+        font-family: '${FONT_FAMILY}';
+        src: url('/fonts/LiberationSans-Bold.ttf') format('truetype');
+        font-weight: bold;
+        font-style: normal;
+        font-display: block;
+      }
+    `
+    document.head.appendChild(style)
     try {
-      const face = new FontFace(FONT_FAMILY, `url(${FONT_URL})`)
-      await face.load()
-      document.fonts.add(face)
-      return true
-    } catch {
-      return false  // fall back to system-ui
+      await document.fonts.load(`bold 100px '${FONT_FAMILY}'`)
+      console.log('[SimDisplay] CaptionFont loaded')
+    } catch (e) {
+      console.warn('[SimDisplay] Font load failed, using fallback:', e)
     }
   })()
   return fontReady
@@ -67,9 +76,7 @@ export function SimDisplay({ text }: Props) {
 
     cancelAnimationFrame(rafRef.current)
 
-    // Black when nothing is showing
     if (!text) {
-      ctx.clearRect(0, 0, CW, CH)
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, CW, CH)
       return
@@ -78,7 +85,7 @@ export function SimDisplay({ text }: Props) {
     const joined    = text.split(/\s+/).slice(0, WORD_LIMIT).join(' ')
     const startTime = performance.now()
 
-    const fontStr = (sz: number) => `bold ${sz}px '${FONT_FAMILY}', system-ui, Arial, sans-serif`
+    const fontStr = (sz: number) => `bold ${sz}px '${FONT_FAMILY}', Arial, sans-serif`
 
     // ---- Binary search: largest font where text fits in width (mirrors PIL _scale_to_fit_one) ----
     let lo = 4, hi = C_MAX_FONT, fittedSize = lo
@@ -100,43 +107,37 @@ export function SimDisplay({ text }: Props) {
     const baseY   = (CH - (ascent + descent)) / 2 + ascent
     const maxOff  = Math.max(0, textW + C_PAD_X * 2 - CW)
 
-    // Shadow params mirror PIL: shadow_offset = max(3, size//36), shadow_blur = max(2, size//48)
-    // converted to canvas px via SCALE
+    // Shadow params mirror PIL: shadow_offset=max(3,size//36), shadow_blur=max(2,size//48)
     const panelSize    = fontSize / SCALE
-    const shadowOffset = Math.max(1.5, (Math.floor(panelSize / 36)) * SCALE)
-    const shadowBlur   = Math.max(1,   (Math.floor(panelSize / 48)) * SCALE)
+    const shadowOffset = Math.max(1.5, Math.floor(panelSize / 36) * SCALE)
+    const shadowBlur   = Math.max(1,   Math.floor(panelSize / 48) * SCALE)
 
     let scrollStart: number | null = null
     let scrollEnd:   number | null = null
 
+    function drawText(x: number, y: number) {
+      ctx.save()
+      ctx.shadowColor   = '#282828'
+      ctx.shadowBlur    = shadowBlur * 2
+      ctx.shadowOffsetX = shadowOffset
+      ctx.shadowOffsetY = shadowOffset
+      ctx.fillStyle = '#282828'
+      ctx.fillText(joined, x, y)
+      ctx.restore()
+      ctx.fillStyle = '#ffffff'
+      ctx.fillText(joined, x, y)
+    }
+
     function draw(now: number) {
       const elapsed = (now - startTime) / 1000
 
-      ctx.clearRect(0, 0, CW, CH)
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, CW, CH)
 
-      // Auto-clear mirrors daemon timing
       if (!needsScroll && elapsed >= AUTO_CLEAR_S) return
       if (scrollEnd !== null && (now - scrollEnd) / 1000 >= AUTO_CLEAR_S) return
 
       ctx.font = fontStr(fontSize)
-
-      function drawText(x: number, y: number) {
-        // Shadow pass (dark layer, blurred via shadow API)
-        ctx.save()
-        ctx.shadowColor   = '#282828'
-        ctx.shadowBlur    = shadowBlur * 2
-        ctx.shadowOffsetX = shadowOffset
-        ctx.shadowOffsetY = shadowOffset
-        ctx.fillStyle = '#282828'
-        ctx.fillText(joined, x, y)
-        ctx.restore()
-
-        // Main text — white, matching PIL fill=(255,255,255)
-        ctx.fillStyle = '#ffffff'
-        ctx.fillText(joined, x, y)
-      }
 
       if (!needsScroll || maxOff <= 0) {
         drawText((CW - textW) / 2, baseY)
