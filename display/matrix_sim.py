@@ -99,15 +99,10 @@ class SimMatrix:
         ps = self._ps
         cell = self._cell
 
-        canvas = np.full((H, cell, W, cell, 3), 8, dtype=np.uint8)
-
-        # Dim inactive LEDs instead of pure black
-        inactive = scaled.sum(axis=2) == 0  # (H, W) bool mask
-        led_color = scaled.copy()
-        led_color[inactive] = [18, 18, 18]
+        canvas = np.zeros((H, cell, W, cell, 3), dtype=np.uint8)
 
         # Broadcast into the LED pixel block (top-left ps×ps of each cell)
-        canvas[:, :ps, :, :ps, :] = led_color[:, np.newaxis, :, np.newaxis, :]
+        canvas[:, :ps, :, :ps, :] = scaled[:, np.newaxis, :, np.newaxis, :]
 
         frame = canvas.reshape(H * cell, W * cell, 3)
 
