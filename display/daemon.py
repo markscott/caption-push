@@ -55,9 +55,13 @@ _preview_jpeg: bytes = b''
 _preview_lock = threading.Lock()
 
 
-def _update_preview(img: PILImage.Image) -> None:
+def _update_preview(img: PILImage.Image, brightness: int = 100) -> None:
     global _preview_jpeg
+    import numpy as np
     thumb = img.resize((img.width // 2, img.height // 2))
+    if brightness < 100:
+        arr = (np.array(thumb, dtype=np.float32) * (brightness / 100.0)).clip(0, 255).astype(np.uint8)
+        thumb = PILImage.fromarray(arr)
     buf = io.BytesIO()
     thumb.save(buf, format='JPEG', quality=80)
     with _preview_lock:
@@ -166,7 +170,7 @@ def main() -> None:
     matrix.start()
     blank = render_blank(base_config)
     matrix.set_image(blank)
-    _update_preview(blank)  # seed MJPEG stream with a black frame immediately
+    _update_preview(blank, args.brightness)  # seed preview with initial black frame
 
     tag = f"[display-{args.display_id}]"
     mode = "simulation" if use_sim else "hardware"
@@ -182,7 +186,7 @@ def main() -> None:
 
     def show_img(img: PILImage.Image) -> None:
         matrix.set_image(img)
-        _update_preview(img)
+        _update_preview(img, current_brightness)
 
     try:
         while True:
@@ -262,7 +266,7 @@ def main() -> None:
                     print(f"{tag} clear")
 
                 elif cmd == "brightness":
-                    level = int(msg.get("level", 60))
+                    level = max(10, min(100, int(msg.get("level", 60))))
                     current_brightness = level
                     matrix.set_brightness(level)  # hardware brightness for real LED matrices
                     print(f"{tag} brightness → {level}")

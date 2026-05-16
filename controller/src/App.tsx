@@ -252,7 +252,7 @@ export default function App() {
           <span>Brightness {brightness}%</span>
           <input
             type="range"
-            min={0}
+            min={10}
             max={100}
             value={brightness}
             onChange={handleBrightness}
