@@ -45,7 +45,9 @@ def _load_font(config: RenderConfig) -> ImageFont.FreeTypeFont | ImageFont.Image
 @lru_cache(maxsize=None)
 def _covered_codepoints(font_path: str) -> frozenset[int]:
     if not os.path.exists(font_path):
-        return frozenset()
+        # Unknown/missing path — treat primary font as covering everything so
+        # the text run stays on the primary font and falls back via load_default.
+        return frozenset(range(0x110000))
     try:
         from fontTools.ttLib import TTFont
         cmap = TTFont(font_path, lazy=True).getBestCmap()

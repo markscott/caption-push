@@ -21,6 +21,7 @@ services:
 
   # ---- Display 1 simulator ----
   display1:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/Dockerfile.display
@@ -36,12 +37,14 @@ services:
       PIXEL_SIZE: "1"
       PIXEL_GAP: "0"
       FONT_PATH: "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+      PYTHONUNBUFFERED: "1"
     depends_on:
       bridge:
         condition: service_healthy
 
   # ---- Display 2 simulator ----
   display2:
+    restart: unless-stopped
     build:
       context: .
       dockerfile: docker/Dockerfile.display
@@ -57,6 +60,7 @@ services:
       PIXEL_SIZE: "1"
       PIXEL_GAP: "0"
       FONT_PATH: "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+      PYTHONUNBUFFERED: "1"
     depends_on:
       bridge:
         condition: service_healthy

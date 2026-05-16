@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import io
+import os
 import platform
 import sys
 import threading
@@ -117,7 +118,8 @@ def main() -> None:
     parser.add_argument("--height", type=int, default=32)
     parser.add_argument("--brightness", type=int, default=100)
     parser.add_argument("--font-size", type=int, default=20)
-    parser.add_argument("--font-path", type=str, default="default")
+    parser.add_argument("--font-path", type=str,
+                        default=os.environ.get("FONT_PATH", "default"))
     parser.add_argument("--max-lines", type=int, default=1,
                         help="Maximum lines of text to render (1 = single line, full height)")
     parser.add_argument("--sim", action="store_true",

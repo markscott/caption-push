@@ -177,7 +177,7 @@ websockify \
 echo "[display-${DISPLAY_ID}] noVNC available at http://localhost:6080/ (auto-scales to browser window)"
 
 # ---- Caption display daemon ----
-exec python3 -m display.daemon \
+exec python3 -u -m display.daemon \
   --sim \
   --id "${DISPLAY_ID}" \
   --address "${CONTROLLER_ADDRESS}" \
