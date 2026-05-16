@@ -15,7 +15,7 @@ LINE_SPACING       = 4      # px between lines (kept for render_identify)
 PADDING_X          = 4      # px horizontal padding
 WORD_LIMIT         = 20     # words beyond this are dropped
 MIN_FONT_RATIO     = 0.60
-MIN_FONT_MARGIN_PX = 50
+MIN_FONT_MARGIN_PX = 25
 
 
 
