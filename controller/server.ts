@@ -88,6 +88,7 @@ wss.on('connection', (ws: WebSocket) => {
             text: msg.text,
             color: msg.color ?? '#DCDCD2',
             align: msg.align ?? 'center',
+            hold: msg.hold ?? false,
           })
           break
         case 'preload':

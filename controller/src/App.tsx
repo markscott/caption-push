@@ -196,13 +196,13 @@ export default function App() {
   }
 
   // ---- Manual send ----
-  function sendManual() {
+  function sendManual(hold = false) {
     const text = manualText.trim()
     if (!text) return
-    send({ type: 'show', text })
+    send({ type: 'show', text, hold })
     setManualText('')
     setDisplayedText(text)
-    setStatusMsg(`Manual: "${text}"`)
+    setStatusMsg(hold ? `Hold: "${text}"` : `Manual: "${text}"`)
   }
 
   // ---- Display window launcher ----
@@ -239,10 +239,6 @@ export default function App() {
             style={{ display: 'none' }}
           />
         </label>
-
-        <button className="btn btn-secondary" onClick={clearDisplay}>
-          Clear Display
-        </button>
 
         <button className="btn btn-outline" onClick={() => send({ type: 'identify' })}>
           Identify All
@@ -332,13 +328,23 @@ export default function App() {
           <input
             ref={manualRef}
             type="text"
-            placeholder="Type and press Enter to send manually…"
+            placeholder="Type and press Enter to send…"
             value={manualText}
             onChange={(e) => setManualText(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendManual()}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.shiftKey ? sendManual(true) : sendManual()
+              }
+            }}
           />
-          <button className="btn btn-primary" onClick={sendManual}>
+          <button className="btn btn-primary" onClick={() => sendManual()}>
             Send
+          </button>
+          <button className="btn btn-primary" onClick={() => sendManual(true)}>
+            Send+Hold
+          </button>
+          <button className="btn btn-secondary" onClick={clearDisplay}>
+            Clear
           </button>
         </div>
 

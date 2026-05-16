@@ -181,6 +181,7 @@ def main() -> None:
     identify_until: float = 0.0   # monotonic timestamp; >0 means identify is active
     scroll_anim: _ScrollAnim | None = None
     t_clear: float | None = None  # monotonic time for auto-clear; None = no pending clear
+    current_hold: bool = False     # when True, never auto-clear
     preload_cache: _PreloadCache | None = None
     current_brightness: int = args.brightness
 
@@ -197,6 +198,7 @@ def main() -> None:
 
                 if cmd == "show":
                     current_text = msg.get("text", "")
+                    current_hold = bool(msg.get("hold", False))
                     color = _hex_to_rgb(msg.get("color", "#FFFFFF"))
                     halign = msg.get("align", "center")
                     current_config = RenderConfig(
@@ -229,7 +231,7 @@ def main() -> None:
                             show_img(_scroll_crop(img, 0, base_config.width, base_config.height))
                         else:
                             scroll_anim = None
-                            t_clear = time.monotonic() + AUTO_CLEAR_S
+                            t_clear = None if current_hold else time.monotonic() + AUTO_CLEAR_S
                             show_img(img)
 
                 elif cmd == "preload":
@@ -258,6 +260,7 @@ def main() -> None:
 
                 elif cmd == "clear":
                     current_text = ""
+                    current_hold = False
                     scroll_anim = None
                     t_clear = None
                     preload_cache = None
@@ -298,7 +301,7 @@ def main() -> None:
                     show_img(_scroll_crop(img, 0, base_config.width, base_config.height))
                 else:
                     scroll_anim = None
-                    t_clear = time.monotonic() + AUTO_CLEAR_S
+                    t_clear = None if current_hold else time.monotonic() + AUTO_CLEAR_S
                     show_img(img)
 
             # ---- Advance scroll animation ----
@@ -315,7 +318,7 @@ def main() -> None:
                     )
                     if new_offset >= max_offset:
                         scroll_anim = None
-                        t_clear = time.monotonic() + AUTO_CLEAR_S
+                        t_clear = None if current_hold else time.monotonic() + AUTO_CLEAR_S
 
             # ---- Auto-clear ----
             if t_clear is not None and time.monotonic() >= t_clear:
