@@ -239,6 +239,7 @@ body {
   display: block;
   width: 100%;
   height: auto;
+  aspect-ratio: 1920 / 360;
   background: #000;
   border-top: 1px solid #111;
 }

@@ -185,7 +185,9 @@ def main() -> None:
     threading.Thread(target=_start_preview_server, args=(7777,), daemon=True).start()
 
     matrix.start()
-    matrix.set_image(render_blank(base_config))
+    blank = render_blank(base_config)
+    matrix.set_image(blank)
+    _update_preview(blank)  # seed MJPEG stream with a black frame immediately
 
     tag = f"[display-{args.display_id}]"
     mode = "simulation" if use_sim else "hardware"
