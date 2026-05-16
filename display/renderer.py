@@ -106,14 +106,17 @@ def render_text(text: str, config: RenderConfig) -> Image.Image:
     _probe = ImageDraw.Draw(Image.new("RGB", (1, 1)))
 
     joined = " ".join(text.split()[:WORD_LIMIT])
-    min_font_size = max(8, int(config.height * MIN_FONT_RATIO) - MIN_FONT_MARGIN_PX)
 
-    font, fitted_size = _scale_to_fit_one(joined, config, _probe)
-    if fitted_size < min_font_size:
-        font = _load_font(replace(config, font_size=min_font_size))
-        fitted_size = min_font_size
-        bb = _probe.textbbox((0, 0), joined, font=font)
-        canvas_w = (bb[2] - bb[0]) + PADDING_X * 2
+    # Fixed font size — same for every line regardless of length.
+    # Short text is centered at this size; long text scrolls.
+    fixed_size = max(8, int(config.height * MIN_FONT_RATIO) - MIN_FONT_MARGIN_PX)
+    fitted_size = fixed_size
+    font = _load_font(replace(config, font_size=fixed_size))
+
+    bb = _probe.textbbox((0, 0), joined, font=font)
+    text_w = bb[2] - bb[0]
+    if text_w + PADDING_X * 2 > config.width:
+        canvas_w = text_w + PADDING_X * 2
         render_config = replace(config, width=canvas_w, halign="left")
     else:
         render_config = config

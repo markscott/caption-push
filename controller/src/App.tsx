@@ -10,7 +10,7 @@ const WS_URL = import.meta.env.DEV
 export default function App() {
   const [lines, setLines] = useState<CaptionLine[]>([])
   const [currentIdx, setCurrentIdx] = useState<number>(-1)
-  const [brightness, setBrightness] = useState<number>(60)
+  const [brightness, setBrightness] = useState<number>(100)
   const [manualText, setManualText] = useState<string>('')
   const [connected, setConnected] = useState<boolean>(false)
   const [statusMsg, setStatusMsg] = useState<string>('No script loaded')
