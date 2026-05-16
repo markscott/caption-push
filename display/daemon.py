@@ -200,7 +200,7 @@ def main() -> None:
                     current_text = msg.get("text", "")
                     current_hold = bool(msg.get("hold", False))
                     color = _hex_to_rgb(msg.get("color", "#FFFFFF"))
-                    halign = msg.get("align", "center")
+                    halign = msg.get("align", "left")
                     current_config = RenderConfig(
                         width=base_config.width,
                         height=base_config.height,
@@ -237,7 +237,7 @@ def main() -> None:
                 elif cmd == "preload":
                     text = msg.get("text", "")
                     color = _hex_to_rgb(msg.get("color", "#FFFFFF"))
-                    halign = msg.get("align", "center")
+                    halign = msg.get("align", "left")
                     if text:
                         cfg = RenderConfig(
                             width=base_config.width,
