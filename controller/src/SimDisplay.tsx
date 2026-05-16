@@ -3,41 +3,43 @@ import { useEffect, useRef, useState } from 'react'
 // ---- Mirror display renderer + daemon constants exactly ----
 const PANEL_W          = 1920
 const PANEL_H          = 360
+const FONT_SIZE        = 320           // matches FONT_SIZE in docker-compose.yml
 const MIN_FONT_RATIO   = 0.60
-const MIN_FONT_MARGIN  = 50          // px below ratio floor before scrolling
-const PADDING_X        = 4           // panel px
-const SCROLL_SPEED     = 300         // panel px / s
+const MIN_FONT_MARGIN  = 50            // px below ratio floor before scrolling
+const PADDING_X        = 4             // panel px
+const SCROLL_SPEED     = 300           // panel px / s
 const SCROLL_DELAY_S   = 1.0
 const AUTO_CLEAR_S     = 10.0
 const WORD_LIMIT       = 20
 
 // Intrinsic canvas resolution (half the real panel — crisp on retina via CSS scale)
-const CW    = PANEL_W / 2            // 960
-const CH    = PANEL_H / 2            // 180
-const SCALE = CH / PANEL_H           // 0.5
+const CW    = PANEL_W / 2              // 960
+const CH    = PANEL_H / 2              // 180
+const SCALE = CH / PANEL_H            // 0.5
 
-// Derived canvas-space constants
-const C_MIN_FONT = Math.max(4, Math.floor((PANEL_H * MIN_FONT_RATIO - MIN_FONT_MARGIN) * SCALE))
-const C_MAX_FONT = Math.floor(PANEL_H * SCALE)
-const C_PAD_X    = PADDING_X * SCALE
-const C_MAX_TW   = CW - C_PAD_X * 2
-const C_SPEED    = SCROLL_SPEED * SCALE   // canvas px / s
+// Derived canvas-space constants (all scaled to canvas px)
+const C_MAX_FONT = Math.floor(FONT_SIZE * SCALE)              // 160 — matches PIL hi bound
+const C_MIN_FONT = Math.max(4, Math.floor((PANEL_H * MIN_FONT_RATIO - MIN_FONT_MARGIN) * SCALE))  // 83
+const C_PAD_X    = PADDING_X * SCALE                          // 2
+const C_MAX_TW   = CW - C_PAD_X * 2                          // 956
+const C_SPEED    = SCROLL_SPEED * SCALE                       // 150 canvas px / s
 
 const FONT_FAMILY = 'CaptionFont'
 const FONT_URL    = '/fonts/LiberationSans-Bold.ttf'
 
-// Load the font once at module level; track readiness via a promise
-let fontReady: Promise<void> | null = null
+// Load font once at module level
+let fontReady: Promise<boolean> | null = null
 
-function ensureFontLoaded(): Promise<void> {
+function ensureFontLoaded(): Promise<boolean> {
   if (fontReady) return fontReady
   fontReady = (async () => {
     try {
       const face = new FontFace(FONT_FAMILY, `url(${FONT_URL})`)
       await face.load()
       document.fonts.add(face)
+      return true
     } catch {
-      // Font unavailable (dev without bridge) — fall back to system-ui
+      return false  // fall back to system-ui
     }
   })()
   return fontReady
@@ -48,8 +50,8 @@ interface Props {
 }
 
 export function SimDisplay({ text }: Props) {
-  const canvasRef  = useRef<HTMLCanvasElement>(null)
-  const rafRef     = useRef<number>(0)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const rafRef    = useRef<number>(0)
   const [fontLoaded, setFontLoaded] = useState(false)
 
   useEffect(() => {
@@ -67,6 +69,7 @@ export function SimDisplay({ text }: Props) {
 
     // Black when nothing is showing
     if (!text) {
+      ctx.clearRect(0, 0, CW, CH)
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, CW, CH)
       return
@@ -77,7 +80,7 @@ export function SimDisplay({ text }: Props) {
 
     const fontStr = (sz: number) => `bold ${sz}px '${FONT_FAMILY}', system-ui, Arial, sans-serif`
 
-    // ---- Binary search: largest font where text fits in width ----
+    // ---- Binary search: largest font where text fits in width (mirrors PIL _scale_to_fit_one) ----
     let lo = 4, hi = C_MAX_FONT, fittedSize = lo
     while (lo <= hi) {
       const mid = (lo + hi) >> 1
@@ -97,12 +100,19 @@ export function SimDisplay({ text }: Props) {
     const baseY   = (CH - (ascent + descent)) / 2 + ascent
     const maxOff  = Math.max(0, textW + C_PAD_X * 2 - CW)
 
+    // Shadow params mirror PIL: shadow_offset = max(3, size//36), shadow_blur = max(2, size//48)
+    // converted to canvas px via SCALE
+    const panelSize    = fontSize / SCALE
+    const shadowOffset = Math.max(1.5, (Math.floor(panelSize / 36)) * SCALE)
+    const shadowBlur   = Math.max(1,   (Math.floor(panelSize / 48)) * SCALE)
+
     let scrollStart: number | null = null
     let scrollEnd:   number | null = null
 
     function draw(now: number) {
       const elapsed = (now - startTime) / 1000
 
+      ctx.clearRect(0, 0, CW, CH)
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, CW, CH)
 
@@ -110,14 +120,27 @@ export function SimDisplay({ text }: Props) {
       if (!needsScroll && elapsed >= AUTO_CLEAR_S) return
       if (scrollEnd !== null && (now - scrollEnd) / 1000 >= AUTO_CLEAR_S) return
 
-      ctx.font      = fontStr(fontSize)
-      ctx.fillStyle = '#dcdcd2'
+      ctx.font = fontStr(fontSize)
+
+      function drawText(x: number, y: number) {
+        // Shadow pass (dark layer, blurred via shadow API)
+        ctx.save()
+        ctx.shadowColor   = '#282828'
+        ctx.shadowBlur    = shadowBlur * 2
+        ctx.shadowOffsetX = shadowOffset
+        ctx.shadowOffsetY = shadowOffset
+        ctx.fillStyle = '#282828'
+        ctx.fillText(joined, x, y)
+        ctx.restore()
+
+        // Main text — white, matching PIL fill=(255,255,255)
+        ctx.fillStyle = '#ffffff'
+        ctx.fillText(joined, x, y)
+      }
 
       if (!needsScroll || maxOff <= 0) {
-        // Static — centered
-        ctx.fillText(joined, (CW - textW) / 2, baseY)
+        drawText((CW - textW) / 2, baseY)
       } else {
-        // Scroll
         let offset = 0
         if (scrollStart === null) {
           if (elapsed >= SCROLL_DELAY_S) scrollStart = now
@@ -129,7 +152,7 @@ export function SimDisplay({ text }: Props) {
         ctx.beginPath()
         ctx.rect(0, 0, CW, CH)
         ctx.clip()
-        ctx.fillText(joined, C_PAD_X - offset, baseY)
+        drawText(C_PAD_X - offset, baseY)
         ctx.restore()
       }
 
