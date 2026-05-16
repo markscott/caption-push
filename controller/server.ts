@@ -40,15 +40,26 @@ const PREVIEW_HOST = process.env.PREVIEW_HOST ?? 'display1'
 const PREVIEW_PORT = parseInt(process.env.PREVIEW_PORT ?? '7777')
 
 app.get('/preview/stream', (req, res) => {
+  // Kill Nagle on the browser-facing socket so each frame chunk goes out immediately
+  req.socket.setNoDelay(true)
+
   const proxy = httpRequest({ hostname: PREVIEW_HOST, port: PREVIEW_PORT, path: '/stream' }, (upstream) => {
+    // Kill Nagle on the display-facing socket too
+    upstream.socket?.setNoDelay(true)
+
     res.writeHead(200, {
-      'Content-Type': upstream.headers['content-type'] ?? 'multipart/x-mixed-replace; boundary=frame',
+      'Content-Type': 'multipart/x-mixed-replace; boundary=frame',
       'Cache-Control': 'no-cache',
       'X-Accel-Buffering': 'no',
+      'Transfer-Encoding': 'chunked',
     })
-    upstream.pipe(res)
+
+    // Explicit data forwarding — don't use pipe() which can introduce buffering
+    upstream.on('data', (chunk: Buffer) => res.write(chunk))
+    upstream.on('end', () => res.end())
     req.on('close', () => upstream.destroy())
   })
+  proxy.on('socket', (s) => s.setNoDelay(true))
   proxy.on('error', () => { if (!res.headersSent) res.status(503).send('display unavailable') })
   proxy.end()
 })

@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import io
 import platform
+import socket as _socket
 import sys
 import threading
 import time
@@ -67,11 +68,17 @@ def _update_preview(img: PILImage.Image) -> None:
 
 
 class _MjpegHandler(BaseHTTPRequestHandler):
+    # HTTP/1.1 so Node.js HTTP client streams data events immediately
+    protocol_version = 'HTTP/1.1'
+
     def do_GET(self) -> None:
+        # Disable Nagle on this connection for minimal frame latency
+        self.connection.setsockopt(_socket.IPPROTO_TCP, _socket.TCP_NODELAY, 1)
         self.send_response(200)
         self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
         self.send_header('Cache-Control', 'no-cache')
         self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Transfer-Encoding', 'chunked')
         self.end_headers()
         last_ver = -1
         while True:
@@ -80,14 +87,18 @@ class _MjpegHandler(BaseHTTPRequestHandler):
             if frame and ver != last_ver:
                 last_ver = ver
                 try:
-                    header = (
+                    part = (
                         b'--frame\r\nContent-Type: image/jpeg\r\nContent-Length: '
                         + str(len(frame)).encode()
                         + b'\r\n\r\n'
+                        + frame
+                        + b'\r\n'
                     )
-                    self.wfile.write(header + frame + b'\r\n')
+                    # Write as a single HTTP/1.1 chunk
+                    chunk = hex(len(part)).encode() + b'\r\n' + part + b'\r\n'
+                    self.wfile.write(chunk)
                     self.wfile.flush()
-                except (BrokenPipeError, ConnectionResetError):
+                except (BrokenPipeError, ConnectionResetError, OSError):
                     break
             else:
                 time.sleep(0.01)
