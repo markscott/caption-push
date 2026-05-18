@@ -1,11 +1,7 @@
-##STAGE (#1 — OVERTURE begins.)
-
 ##SCENE ONE
-
+##STAGE (#1 — OVERTURE begins.)
 ##STAGE (The curtain rises on the New York City Municipal Orphanage ~— Girls’ Annex. Shortly after 3:00 a.m. on a chilly morning in early December 1933.)
-
 ##STAGE (The stage is nearly dark. Asleep in the dormitory are ORPHANS — MOLLY, the littlest who is 6; KATE, the next-to-littlest, who is 7; TESSIE, the crybaby, who is 10; PEPPER, the toughest, who is 12; JULY, the quietest, who is 13; and DUFFY, the biggest, who is also 13.)
-
 ##STAGE (#2 - MAYBE (UNDERSCORE) begins.)
 
 ##CHARACTER MOLLY SAYS:
@@ -17,26 +13,21 @@ Shut up!
 ##CHARACTER DUFFY SAYS:
 Can’t anybody get any sleep around here?
 ##CHARACTER MOLLY SAYS:
-Mama.
-Mommy.
+Mama. Mommy.
 ##CHARACTER PEPPER SAYS:
-I said shut your trap,
-Molly.
+I said shut your trap, Molly.
 
 ##STAGE (PEPPER shoves MOLLY to the floor.)
 
 ##CHARACTER JULY SAYS:
-Ahh,
-stop shovin’ the poor kid.
+Ahh, stop shovin’ the poor kid.
 She ain’t doin’ nuthin’ to you.
 
 ##CHARACTER PEPPER SAYS:
-She’s keepin’ me awake,
-ain’t she?
+She’s keepin’ me awake, ain’t she?
 
 ##CHARACTER JULY SAYS:
-No,
-you’re keeping us awake—
+No, you’re keeping us awake
 
 ##CHARACTER PEPPER SAYS:
 You wanna make somethin’ out of it?
@@ -47,50 +38,42 @@ How ‘bout I make a pancake outta you?
 ##STAGE (PEPPER and JULY fight.)
 
 ##CHARACTER TESSIE SAYS:
-Oh my goodness,
-oh my goodness,
-they’re fightin’ and I won’t get no sleep all night.
-Oh my goodness,
-oh my goodness.
+Oh my goodness, oh my goodness,
+they’re fightin’ and I won’t get 
+no sleep all night.
+Oh my goodness, oh my goodness.
 
 ##STAGE (ANNIE, who is 11, runs in with a bucket. She has been up cleaning.)
 ##CHARACTER ANNIE SAYS:
-Pipe down,
-all of ya.
+Pipe down, all of ya.
 Go back to sleep.
 
 ##STAGE (to MOLLY)
-It’s all right,
-Molly.
+It’s all right, Molly.
 Annie’s here.
 
 ##CHARACTER MOLLY SAYS:
-It was my mama,
-Annie.
+It was my mama, Annie.
 We was ridin’ on the ferryboat.
-And she was holdin’ me up to see all the big ships.
+And she was holdin’ me up 
+to see all the big ships.
 And then I couldn’t find her no more,
 
 ##STAGE (ANNIE holds a hanky for MOLLY.)
 
 ##CHARACTER ANNIE SAYS:
-Blow.
-It was only a dream,
-honey.
-Now,
-you gotta go back to sleep.
+Blow. It was only a dream, honey. 
+Now, you gotta go back to sleep.
 It's after three o’clock.
 
 ##CHARACTER MOLLY SAYS:
-Annie,
-read me your note.
+Annie,read me your note.
 ##CHARACTER ANNIE SAYS:
 Again?
 ##CHARACTER MOLLY SAYS:
 Please?
 ##CHARACTER ANNIE SAYS:
-Sure,
-Molly.
+Sure, Molly.
 ##CHARACTER PEPPER SAYS:
 Here it comes again.
 
@@ -107,91 +90,96 @@ We will be back to get her soon.
 
 ##CHARACTER PEPPER SAYS:
 ##STAGE (mockingly)
-We have left half of a silver locket around her neck and Kept the other half—
+We have left half of a silver locket 
+around her neck and 
+kept the other half
 
 ##CHARACTER PEPPER, DUFFY, KATE SAYS:
-so that when we come back for her you will know that she’s our baby.
+so that when we come back for her 
+you will know that she’s our baby.
 
 ##CHARACTER TESSIE SAYS:
-Oh my goodness,
-oh my goodness,
+Oh my goodness, oh my goodness,
 now they’re laughing.
 
 ##CHARACTER ANNIE SAYS:
 ##STAGE (to the others)
 All right.
-Do you wanna sleep with your teeth insida your mouth or out!
+Do you wanna sleep with your teeth 
+insida your mouth or out!
 
 ##STAGE (ANNIE lovingly folds her note and puts it back in her pocket.)
 
 ##CHARACTER MOLLY SAYS:
-Gee,
-I dream about havin’ a mother and father again.
+Gee, I dream about havin’ 
+a mother and father again.
 But you're lucky.
 You really got ’em.
 
 ##STAGE (#3 — MAYBE begins.)
 
-MAYBE
+##SONG BEGIN Maybe
 
 ##CHARACTER ANNIE SAYS:
 ##STAGE (fingering her locket) I know.
-##STAGE (ANNIE and MOLLY cuddle together on the floor.) Somewhere.
+##STAGE (ANNIE and MOLLY cuddle together on the floor.) 
+Somewhere... 
 
-##STAGE (ANNIE:)
+##CHARACTER ANNIE SINGS:
+Maybe far away or maybe real nearby
+he may be pour-in' her coffee
+she may be straight'nin his tie!
+Maybe in a house all hidden by a hill
 
-° oe
+##CHARACTER MOLLY SINGS:
+she's sittin' playin' a piano
 
-##CHARACTER TESSIE SAYS:
+##CHARACTER TESSIE SINGS:
+he's sittin' payin' a bill
 
-##CHARACTER JO DUFFY SAYS:
+##CHARACTER ANNIE SINGS:
+Betcha they're young.
+Betcha they're smart.
 
-an |
+##CHARACTER ORPHANS SINGS:
+Betcha they collect things like ashtrays & art!
+Betcha they're good. 
+Why shouldn't they be?
 
-##CHARACTER KATE SAYS:
-PEPPER:
+##CHARACTER ANNIE & ORPHANS SING:
+Their one mistake was givin' up on me!
+So maybe now it's time,
+and maybe when I wake
 
-##CHARACTER ANNIE, SAYS:
-##CHARACTER ORPHANS SAYS:
-
-So,
-may-be now it's time,
-and
-
-may - be when I wake,
-##CHARACTER ANNIE, SAYS:
-##CHARACTER ORPHANS SAYS:
+##CHARACTER ANNIE & OPRPHAS SING:
+They'll be there
+callin' me "Baby"
 
 ##STAGE (ANNIE carries MOLLY, who has fallen asleep, back to bed, and tucks her in as the ORPHANS, one by one, say goodnight. The music continues softly underneath. ANNIE is still thinking about her parents.)
 
-rit,
-A tempo 15
+##CHARACTWER ANNIE SINGS:
+Betcha he reads, betcha she sews.
+Maybe she's made me a close of clothes!
+Maybe their strict, as straight as a line.
+Don't really care,
+as long as their mine!
 
-may - be.
+##STAGE  At the foot of the bed
+So, maybe now this prayer's 
+the last one of its kind.
+Won't you please come get your "Baby"
+maybe?
 
-So,
-may-be now this prayer's the at (at the foot of the bed) last one of its kind:
-
-won't you please come get your "Ba - by,"
+## SONG END
 
 ##STAGE (ANNIE climbs into bed and tucks herself in.) ANNIE
-
-2 2 ORPHANS: rit.
-~~ a ) ad
-
 ##STAGE (#4 — ANNIE’S ESCAPE begins. A faraway church
-
-bell chimes 4:00 a.m. ANNIE goes up to the window looking out into the street,
-then returns to her bed and starts putting some things into a small basket.
-The ORPHANS are dimly seen waking up as ANNIE turns on
-
-a flashlight.)
+##STAGE bell chimes 4:00 a.m. ANNIE goes up to the window looking out into the street, then returns to her bed and starts putting some things into a small basket. The ORPHANS are dimly seen waking up as ANNIE turns on a flashlight.)
 
 ##CHARACTER PEPPER SAYS:
 Now what?
 ##CHARACTER KATE SAYS:
-Annie,
-whattaya doin’?
+Annie, whattaya doin’?
 
 ##CHARACTER ANNIE SAYS:
 Runnin’ away.
@@ -200,14 +188,12 @@ Runnin’ away.
 Oh my goodness.
 
 ##CHARACTER ANNIE SAYS:
-
 ##STAGE (puts on her sweater)
 My folks are never comin’ for me.
 I gotta go find them.
 
 ##CHARACTER JULY SAYS:
-Annie,
-you're crazy.
+Annie, you're crazy.
 Miss Hannigan’l] catch you.
 
 ##CHARACTER TESSIE SAYS:
@@ -217,20 +203,15 @@ And give you the paddle.
 I don’t care.
 I’m getting out of here.
 ##STAGE (with a basket under her arm)
-Okay.
-I’m ready.
+Okay. I’m ready.
 Wish me luck.
 
 ##CHARACTER ALL EXCEPT PEPPER SAYS:
-Good luck,
-Annie.
+Good luck, Annie.
 
 ##CHARACTER PEPPER SAYS:
-So long,
-dumbbell.
+So long, dumbbell.
 And good luck.
-
-rf
 
 ##STAGE (With the basket under her arm and shining the flashlight in front of her, ANNIE sneaks on tiptoe across the stage, toward the front door. Suspenseful music plays underneath. As ANNIE reaches to open the door, MISS HANNIGAN, wearing a bathrobe, flings open her door and, witch-like, stands bathed in white light before ANNIE.)
 
@@ -242,16 +223,16 @@ Get up!
 
 ##CHARACTER ANNIE SAYS:
 ##STAGE (getting up, warily)
-Yes,
-Miss Hannigan.
+Yes, Miss Hannigan.
 
 ##CHARACTER MISS HANNIGAN SAYS:
 Turn around.
 ##STAGE (ANNIE doesn’t move.)
 I said turn around.
 ##STAGE (ANNIE turns around and MISS HANNIGAN hits her on the backside with a paddle.)
-There! Now,
-what do you say? What...
+There! 
+Now, what do you say? 
+What...
 do...
 you...
 say?
@@ -267,14 +248,17 @@ Rotten orphan.
 ##CHARACTER ANNIE SAYS:
 ##STAGE (angrily)
 I’m not an orphan.
-My mother and father left a note saying they loved me and they were coming back for me.
+My mother and father left a note 
+saying they loved me and 
+they were coming back for me.
 
 ##CHARACTER MISS HANNIGAN SAYS:
-That was 1922; this is 1933.
+That was 1922; 
+this is 1933.
 ##STAGE (MISS HANNIGAN switches on the light in the dormitory, sticks her head through the door, and blows her whistle.)
-Get up! Now,
-for this one’s shenanigans,
-you'll all get down on your knobby little knees and clean this dump until it shines like the top of the Chrysler Building!
+Get up!  
+Clean this dump until it shines 
+like the top of the Chrysler Building!
 
 ##CHARACTER TESSIE SAYS:
 ##STAGE (starting to cry)
@@ -285,70 +269,78 @@ But it’s four o’clock in the morning.
 Get to work.
 
 ##CHARACTER ANNIE, ORPHANS SAYS:
-Yes,
-Miss Hannigan.
+Yes, Miss Hannigan.
 
 ##CHARACTER MISS HANNIGAN SAYS:
 Now!
 ##STAGE (The ORPHANS run for pails and return to front.)
 Why any kid would want to be an orphan,
-I’ll never know.
+I’ll never know...
 
-IT'S THE HARD-KNOCK LIFE
-
+## SONG BEGIN HARD-KNOCK LIFE
 ##STAGE (As MISS HANNIGAN exits slamming the door behind her, the ORPHANS throw down their scrub brushes.)
-
 ##CHARACTER ALL ORPHANS SAYS:
-
 It's the hard-knock life for us!
+It's the hard-knock life for us!
+It's the hard-knock life! 
+Got no folks to speak of,
+so,it's the hard-knock 
+row we hoe!
 
-It's the hard - knock __ life for us!
+Cotton blankets,
+'stead-a wool!
+Empty bellies,
+'stead-a full!
 
-##CHARACTER ANNIE SAYS:
-ALL ORPHANS:
+It's the hard-knock life! 
+Don't it feel like the
+wind is always howl-in?
 
-##CHARACTER ANNIE SAYS:
-ALL ORPHANS:
+Don't it seem like there's
+never any light?
 
-It's the hard-knock life! Got no folks to
+Once a day, don't you wanna
+throw the towl in?
 
-speak of,
-so,
-it's the hard-knock row we hoe!
+It's easier than puttin' up a fight
+No one's there when your dreams 
+at night get creepy!
 
-It's the hard-knock _ life! Don't it
+No one cares if you grow 
+or if you shrink! 
+No one dries when your eyes 
+get wet an’ weepy!
 
-##CHARACTER DUFFY, JULY SAYS:
+From the cryin',
+you'd think this place'd sink!
 
-##CHARACTER MOLLY, PEPPER SAYS:
+Ohhhhh!!!!
+Empty belly life!
+Rotten smelly life!
+Full of sorry life!
+No tomorrow life!
 
-there when your dreams at night get
-
-creep-y!____.
-No one cares if you grow or if you
-
-shrink! No one dries when your eyes get wet an’
-
-##CHARACTER ALL ORPHANS SAYS:
-
-"San - ta Claus,” what's _ that? Who's he?
+"Santa Claus,” 
+What's that? Who's he?
 
 No one cares for you a smidge
+when you're in an orphanage!
 
-when you're in an or -  phan-age!
+It's the hard-knock life!
 
-It's the hard - knock life!
-
-##CHARACTER MOLLY SAYS:
 ##STAGE (making a whistling sound and imitating Miss Hannigan) You'll stay up till this dump shines like the top of the Chrysler Building.
 
-##CHARACTER ALL SAYS:
-##STAGE (except MOLLY)
+##CHARACTER MOLLY SAYS:
+You'll stay up till this dump
+shines like the Chrysler building!
 
-Yank the whis-kers from her chin.
+##CHARACTER ORPHANS SING:
+Yank the whiskers from her chin.
+Jab her with a safety pinch
+Make her drink Mickey Finn
 
-I love you,
-Miss Han-ni - gan!
+I love you, Miss Hannigan!
+
 
 ##STAGE (ANNIE and the ORPHANS finish the cleaning and strip the beds. MOLLY continues her imitation of Miss Hannigan.)
 ##CHARACTER MOLLY SAYS:
@@ -362,14 +354,16 @@ It's the hard - knock life for us!
 
 ##CHARACTER MOLLY SAYS:
 ##STAGE (drunkenly) Merry Christmas.
-
 It's the hard - knock life for us!
 
 ##CHARACTER MOLLY SAYS:
 Merry Christmas.
 
-No one cares for you a smidge : MOLLY: Merry Christmas.
-when you're in an or - phan - age!
+No one cares for you a smidge 
+## CHARACTER MOLLY SAYS:
+Merry Christmas.
+##CHARACTER ORPHANS SING:
+When you're in an orphanage!
 
 ##STAGE (MOLLY falls into the laundry hamper and is covered with sheets the children have stripped from the beds.)
 
@@ -378,24 +372,20 @@ it's the hard - knock life!
 ##STAGE (MISS HANNIGAN, now dressed, enters and whistles. ANNIE and the ORPHANS run to their line up in front of their beds, but ANNIE’s attention remains on the laundry. She is hatching an idea.)
 
 ##CHARACTER MISS HANNIGAN SAYS:
-Good morning,
-children.
+Good morning, children.
 
 ##CHARACTER ORPHANS SAYS:
-Good morning,
-Miss Hannigan.
+Good morning, Miss Hannigan.
 
 ##CHARACTER MISS HANNIGAN SAYS:
 Well?
 
 ##CHARACTER ORPHANS SAYS:
-I love you,
-Miss Hannigan.
+I love you, Miss Hannigan.
 
 ##CHARACTER MOLLY SAYS:
 ##STAGE (from the hamper)
-I love you,
-Miss Hannigan.
+I love you, Miss Hannigan.
 
 ##CHARACTER MISS HANNIGAN SAYS:
 You.
@@ -410,16 +400,14 @@ Get her out of there!
 ##STAGE (to MOLLY)
 Your days are numbered.
 ##STAGE (whistle)
-All right.
-Breakfast.
+All right. Breakfast.
 
 ##CHARACTER ORPHANS SAYS:
 ##STAGE (dejected)
 Hot mush? Yuck!
 
 ##CHARACTER MISS HANNIGAN SAYS:
-No,
-not hot mush,
+No, not hot mush,
 
 ##STAGE (The ORPHANS and ANNIE react happily to this news.)
 Cold mush.
@@ -431,8 +419,7 @@ There’s an order of dresses to finish,
 if you have to work straight through to midnight.
 
 ##CHARACTER ANNIE, ORPHANS SAYS:
-Yes,
-Miss Hannigan.
+Yes, Miss Hannigan.
 
 ##CHARACTER MISS HANNIGAN SAYS:
 Now line up.
@@ -440,23 +427,17 @@ Now line up.
 ##STAGE (The ORPHANS and ANNIE file past MISS HANNIGAN, who inspects them as the laundry man, BUNDLES McCLOSKEY, enters, carrying a load of clean sheets.)
 
 ##CHARACTER BUNDLES SAYS:
-Laundry.
-Laundry man.
+Laundry. Laundry man.
 
 ##CHARACTER ANNIE, ORPHANS SAYS:
-Mornin’,
-Bundles.
+Mornin’, Bundles.
 
 ##CHARACTER BUNDLES SAYS:
-Mornin’,
-kids.
+Mornin’, kids.
 Clean sheets once a month,
-whether you need “em or not.
+whether you need 'em or not.
 ##STAGE (ANNIE, bidden by the ORPHANS, gets into the laundry bag.)
-Hey,
-hey,
-hey,
-Aggie.
+Hey,hey,hey,Aggie.
 How’s the prettiest gal south of 14th Street?
 
 ##CHARACTER MISS HANNIGAN SAYS:
@@ -465,12 +446,12 @@ get out of here with that laundry!
 
 ##CHARACTER BUNDLES SAYS:
 ##STAGE (picking up the laundry bag with ANNIE in it)
-So long,
-gorgeous - and Merry Christmas.
+So long, gorgeous 
+and Merry Christmas.
+
 ##CHARACTER MISS HANNIGAN SAYS:
 ##STAGE (checking floor)
-Huh,
-you call this clean,
+Huh, you call this clean,
 Annie.
 This place is like a pigsty...
 Annie? Annie?
@@ -496,44 +477,38 @@ No more hard-knock life for Annie!
 
 ##STAGE (The ORPHANS cheer again. #6 — IT’S THE HARD-KNOCK LIFE (REPRISE) begins.)
 
-IT’S THE HARD-KNOCK LIFE
-##STAGE (REPRISE)
+##SONG BEGIN IT’S THE HARD-KNOCK LIFE (REPRISE)
+Lucky duck, she got away,
+but we're gonna have to pay
+Gonna get our faces slapped
+Gonna get our knuckles rapped
 
-Moderato in 4 GULY:)
+It's the hard knock life,
+it's the hard knock life,
+it's the hard knock life!
 
-##CHARACTER MOLLY SAYS:
-KATE,
-TESSIE:
-
-##CHARACTER DUFFY, PEPPER SAYS:
-
-p+ A I eves NN SE WO (l ACY TE scree A GA EE AN SOO 1 a ee eT; SS eee | a Sy Se ee «
-
-it's the hard - knock life!
-
-##STAGE (Blackout. #7 - SCENE CHANGE 1 begins.)
+##SONG END
 
 ##SCENE TWO
 
 ##STAGE (Lights up. A few garbage cans place us on a Street corner at St. Mark’s Place. It is a chilly December afternoon, a few hours later. A DOGCATCHER with a rope runs across the stage. An APPLE SELLER enters, appealing to the occasional PASSERSBY.)
 
 ##CHARACTER APPLE SELLER SAYS:
-Apples,
-apples.
+Apples, apples.
 Two for a nickel.
 
 ##CHARACTER ANNIE SAYS:
 ##STAGE (runs out from behind a tenement)
-Excuse me,
-sir,
-but could you donate an apple to the orphan’s picnic?
+Excuse me, sir,
+but could you donate an apple 
+to the orphan’s picnic?
 ##CHARACTER APPLE SELLER SAYS:
 ##STAGE (giving ANNIE an apple)
-Why not? Nobody’s buying ’em anyway.
+Why not? 
+Nobody’s buying ’em anyway.
 
 ##CHARACTER ANNIE SAYS:
-Gee thanks,
-Mister.
+Gee thanks, Mister.
 
 ##CHARACTER APPLE SELLER SAYS:
 Say kid,
@@ -550,96 +525,86 @@ Soon as I take a bite.
 ##CHARACTER DOGCATCHER SAYS:
 You seen any stray mutts around here?
 ##CHARACTER ANNIE SAYS:
-No,
-sir.
+No, sir.
 ##CHARACTER DOGCATCHER SAYS:
 Good.
-Then they must all be runnin’ wild over to Astor Place.
+Then they must all be runnin’ 
+wild over to Astor Place.
 
 ##STAGE (The DOGCATCHER exits. ANNIE watches him go and then turns and notices a DOG.)
 
 ##CHARACTER ANNIE SAYS:
-Hey,
-there’s one they didn’t get.
+Hey, there’s one they didn’t get.
 
 ##STAGE (ANNIE gets down on her hands and knees and signals for the DOG to come to her. SANDY enters and crosses to ANNIE.)
 
 ##STAGE (ANNIE)
 ##STAGE (to SANDY)
-They’re after you ain’t they? Well,
-they’re after me,
-too.
-But don’t worry,
+They’re after you ain’t they? 
+Well,they’re after me too.
+but don’t worry,
 I ain’t gonna let them get you or me.
 Everything’s gonna be fine.
 
-##STAGE (#8 —- TOMORROW begins.)
+##SONG BEGIN - TOMORROW
 
-TOMORROW
+For the both of us. If not today, well...
 
-##STAGE (ANNIE:) For the both of us. If not today, well...
-
-Slowly in 4 rit.
-a tempo
-
-##STAGE (ANNIE:)
-
-none! § When I'm stuck with a day that's gray and
-
-oy
-
-lone- ly,
-I just stick out my chin and grin and
-
-Pl : SANDY: ANNIE:
+Th sun'll come out
+tomorrow
+Bet your bottom dollar
+that tomorrow there'll be sun!
+Just thinkin' about 
+tomorrow, clears away
+the cobwebs & the sorrow
+'til there's none!
+When I'm stuck with a day 
+that's gray and lonely,
+I just stick out my chin & grin
+And say...
+Oh, the sun'll come out
+tomorrow.
+so ya gotta hang on 'til
+tomorrow, come what may
+Tomorrow, tomorrow!
+I love ya, tomorrow!
+You're always a day away!
 
 ##CHARACTER WARD SAYS:
-Hey,
-you! Little girl.
+Hey, you! Little girl.
 Come here.
 ##CHARACTER ANNIE SAYS:
-Yes,
-Officer?
+Yes, Officer?
 
-##STAGE (A policeman, WARD: That dog there. Ain't he a stray?
+##STAGE (A policeman, WARD: 
+That dog there. Ain't he a stray?
 ##CHARACTER OFFICER WARD, ANNIE SAYS:
-A stray? Oh,
-no,
-Officer.
+A stray? Oh no, Officer.
 He's my dog.
-enters.) WARD: Your dog,
-huh? So,
-what's his name?
+Your dog, huh? 
+So, what's his name?
 
-way!
 
 ##CHARACTER ANNIE SAYS:
 His name? His name is...
-Sandy.
-Right,
-that's it.
-I call him Sandy because of his nice sandy color.
+Sandy...Right, that's it.
+I call him Sandy because of 
+his nice sandy color.
 
 ##CHARACTER WARD SAYS:
-Okay,
-let's see him answer to his name.
+Okay, let's see him answer to his name.
 
 ##CHARACTER ANNIE SAYS:
-Well,
-you see,
-Officer...
-I just got him and sometimes...
+Well, you see, Officer...
+I  just got him and sometimes...
 ##CHARACTER WARD SAYS:
 Call him!
 
 ##CHARACTER ANNIE SAYS:
-Here,
-Sandy.
-Here,
-boy.
-Sandy.
-(SANDY crosses fo ANNIE,
-stands and puts his front paws on her shoulders.) Good Sandy.
+Here, Sandy.
+Here, boy. Sandy.
+##STAGE (SANDY crosses to ANNIE, stands and puts his front paws on her shoulders.) 
+Good Sandy.
 Good old Sandy.
 
 ##CHARACTER WARD SAYS:
@@ -649,24 +614,19 @@ I wanna see him
 on a leash and with a license,
 or else he goes to the pound.
 
-% 4
 ##CHARACTER ANNIE SAYS:
-Yes,
-sir.
+Yes, sir.
 I understand.
 ##CHARACTER WARD SAYS:
-Now get along with you before you catch your death of
-
+Now get along with you 
+before you catch your death of
 cold in this weather.
 ##CHARACTER ANNIE SAYS:
-Oh,
-I don't mind the weather.
+Oh, I don't mind the weather.
 
-z 3
 
 When I'm stuck with a day that's gray and
-
-lone-ly,
+lonely,
 I just stick out my chin and grin and
 
 day a - way!
