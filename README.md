@@ -1,6 +1,6 @@
 # Caption Push
 
-Real-time captioning for live theater. An operator pushes script lines to RGB LED panels mounted in the house — all displays update simultaneously in under 15 ms.
+Real-time captioning for live theater. An operator pushes script lines to audience-facing displays — all screens update simultaneously in under 15 ms.
 
 ![Operator UI](docs/images/operator-ui.png)
 
@@ -8,22 +8,23 @@ Real-time captioning for live theater. An operator pushes script lines to RGB LE
 
 ## How it works
 
-A browser-based operator console runs on any laptop. The operator advances through a pre-loaded script using the keyboard, and each line is broadcast over the local network to one or more display units. Each display unit is either a Raspberry Pi driving physical HUB75 LED matrix panels, or a simulated display running in Docker for testing.
+A browser-based operator console runs on any laptop. The operator advances through a pre-loaded script using the keyboard, and each caption line is broadcast over the local network to one or more display units. The recommended display is any HDMI monitor running a fullscreen browser window — no special hardware required. HUB75 RGB LED matrix panels driven by a Raspberry Pi are also supported for large-format outdoor signage.
 
 ```
-Operator Browser → WebSocket → Node Bridge → ZeroMQ PUB → Display Pi(s)
+Operator Browser → WebSocket → Node Bridge → ZeroMQ PUB → Display Computer(s)
 ```
 
 ---
 
 ## Quick Start (Docker Desktop)
 
-Docker Desktop is the recommended way to run Caption Push for development, testing, and single-machine demos.
+Docker Desktop is the recommended runtime. Everything — the operator console, the caption renderer, and the display outputs — runs in containers. The audience-facing displays are browser windows that you open fullscreen on HDMI monitors.
 
 ### Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (Mac or Windows)
 - A modern browser (Chrome, Firefox, Safari)
+- One or more external HDMI monitors for display (optional for testing, required for shows)
 
 ### 1. Clone the repository
 
@@ -40,25 +41,31 @@ docker compose up --build -d
 
 This builds three containers and starts them in the background:
 - **bridge** — operator UI + WebSocket server + ZeroMQ publisher (port 4000)
-- **display1** — simulated LED display #1 with noVNC viewer (port 6080)
-- **display2** — simulated LED display #2 with noVNC viewer (port 6081)
+- **display1** — caption renderer #1 with browser-accessible output (port 6080)
+- **display2** — caption renderer #2 with browser-accessible output (port 6081)
 
 The first build takes a few minutes. Subsequent starts are fast.
 
 ### 3. Open the operator console
 
+On your operator laptop, open:
+
 ```
 http://localhost:4000
 ```
 
-### 4. Open the simulated displays
+### 4. Put the displays on HDMI monitors
 
-Open these in separate browser tabs or windows — ideally on a second monitor:
+For each physical display screen, open a browser window and navigate to the display URL, then move that window to the HDMI monitor and go fullscreen.
 
-- **Display 1:** http://localhost:6080
-- **Display 2:** http://localhost:6081
+| Display | URL | Shortcut to fullscreen |
+|---|---|---|
+| Display 1 | http://localhost:6080 | `F11` (Windows/Linux) or `⌃⌘F` (Mac) |
+| Display 2 | http://localhost:6081 | Same |
 
-Both pages auto-connect and scale to fill the browser window. Click "Fullscreen" or use the browser's fullscreen shortcut for a clean view.
+The page auto-connects and scales the caption output to fill the entire screen. The result is white bold text on a black background — clean and legible at distance.
+
+You can also click **Test Window** or **Fullscreen** in the operator UI's Display Windows section to launch these directly.
 
 ### 5. Load a script and start pushing captions
 
@@ -106,7 +113,7 @@ Type any text and press **Enter** (or click **Send**) to push it immediately out
 
 ### Display Windows
 
-Opens a noVNC viewer for Display 1 or Display 2 in a new browser window. Use **Test Window** for a small monitoring view, **Fullscreen** for a window sized to the full screen.
+Opens the caption output for Display 1 or Display 2 in a new browser window. Use **Test Window** for a small monitoring view alongside the operator console. Use **Fullscreen** to open a window already sized to fill the screen — drag it to an HDMI monitor and it's ready to go.
 
 ### Keyboard shortcuts
 
@@ -167,9 +174,91 @@ No, you're keeping us awake.
 
 ---
 
-## Raspberry Pi Deployment
+## Live Show Setup (HDMI Monitors)
 
-For a real show, each display is a Raspberry Pi connected to HUB75 LED matrix panels. The operator laptop and all Pis must be on the same network.
+For a real show the setup is the same as the quick start, with a few additional steps for physical positioning and network.
+
+### Recommended hardware
+
+| Item | Notes |
+|---|---|
+| Operator laptop | Any modern Mac or Windows machine with Docker Desktop |
+| HDMI monitor per display location | Any TV or monitor works; 1080p or 4K, any aspect ratio |
+| HDMI cable or wireless HDMI sender | For routing signal from laptop to display position |
+| Dedicated WiFi access point (optional) | Keeps theater traffic off public WiFi; reduces latency variance |
+
+### Single-computer setup (laptop + one or more HDMI monitors)
+
+The simplest configuration: run everything on the operator laptop, connect HDMI monitors directly, and drag the display browser windows to each screen.
+
+```
+Operator Laptop
+├── Docker Desktop (bridge + display1 + display2 containers)
+├── Operator browser window (http://localhost:4000) — stays on laptop screen
+├── Display 1 browser window (http://localhost:6080) — moved to HDMI monitor 1, fullscreen
+└── Display 2 browser window (http://localhost:6081) — moved to HDMI monitor 2, fullscreen
+```
+
+Steps:
+1. `docker compose up -d`
+2. Open http://localhost:4000 as your operator console
+3. Open http://localhost:6080 in a new window, drag it to the first HDMI monitor, go fullscreen
+4. Repeat for http://localhost:6081 on the second monitor
+5. Load your script and start the show
+
+### Two-computer setup (separate operator and display machines)
+
+For longer cable runs or when the operator is far from the display positions, run the display containers on a dedicated machine that stays near the screens.
+
+```
+Operator Laptop ─── WiFi/LAN ─── Display Computer
+  http://192.168.1.50:4000           docker compose up display1 display2
+  (operator console)                 HDMI → Monitor 1
+                                     HDMI → Monitor 2
+```
+
+On the **display computer**, edit `docker-compose.yml` to point at the operator laptop's IP and start only the display containers:
+
+```bash
+# On display computer — set CONTROLLER_ADDRESS to operator laptop's IP
+CONTROLLER_ADDRESS=tcp://192.168.1.100:5555 docker compose up display1 display2 -d
+```
+
+On the **operator laptop**, start only the bridge:
+
+```bash
+docker compose up bridge -d
+# Open http://localhost:4000
+```
+
+Then on the display computer open http://localhost:6080 and http://localhost:6081 fullscreen on the connected monitors.
+
+### Display resolution and font size
+
+The default configuration uses a 1920×360 canvas (a widescreen letterbox bar). Adjust in `docker-compose.yml` to match your monitor:
+
+```yaml
+environment:
+  PANEL_WIDTH: "1920"    # monitor width in pixels
+  PANEL_HEIGHT: "360"    # height of the caption bar (not full monitor height)
+  FONT_SIZE: "320"       # should be roughly PANEL_HEIGHT × 0.9
+```
+
+For a full 1080p screen showing only captions: set `PANEL_HEIGHT: "1080"` and `FONT_SIZE: "900"`.
+
+The noVNC viewer scales the output to fill the browser window, so the caption bar will stretch to fill whatever screen size you use — no pixel-perfect matching required.
+
+### Network tips
+
+- A dedicated 2.4 GHz or 5 GHz access point is recommended for show night
+- Keep theater traffic on its own SSID away from public WiFi
+- Latency over WiFi is 2–8 ms — imperceptible for captions
+
+---
+
+## Advanced: Raspberry Pi + LED Matrix Panels
+
+For large-format LED matrix displays (HUB75 panels), a Raspberry Pi drives the panels directly. This path requires more hardware setup but produces a very bright, high-contrast display visible across large venues.
 
 ### Hardware per display unit
 
@@ -181,15 +270,9 @@ For a real show, each display is a Raspberry Pi connected to HUB75 LED matrix pa
 | 5 V 4 A power supply per panel | Panels draw up to 3.5 A at full white |
 | 16 GB microSD (A1 class) | Use read-only root for power-cut resilience |
 
-### Network setup
-
-- Dedicated 2.4 GHz or 5 GHz access point recommended
-- Keep theater traffic on its own SSID away from public WiFi
-- Wire the operator laptop if possible — Pi WiFi latency is 2–8 ms, fine for captions
-
 ### Provisioning a Pi
 
-Run the setup script once per Pi. Set `CONTROLLER_IP` to the IP of the laptop running the bridge.
+Run the setup script once per Pi. Set `CONTROLLER_IP` to the IP of the machine running the bridge.
 
 ```bash
 # On the Pi — run from the caption-push repo directory
@@ -204,27 +287,14 @@ The script:
 3. Builds and installs `rpi-rgb-led-matrix`
 4. Installs a systemd service that starts the display daemon on boot
 
-### Starting the bridge (on the operator laptop)
-
-In production you still run the bridge via Docker (or Node directly):
+### Checking Pi display status
 
 ```bash
-# Docker (recommended)
-docker compose up bridge -d
-
-# Or Node directly (requires npm install in controller/)
-cd controller && node server.js
-```
-
-### Checking display status
-
-```bash
-# On Pi — watch live logs
+# Watch live logs
 sudo journalctl -fu caption-display.service
-
-# Identify display #1 physically (flash its number for 2 seconds)
-# Use the "Identify All" button in the operator UI
 ```
+
+Use **Identify All** in the operator UI to flash each panel's number for 2 seconds — useful for confirming which Pi is which when mounting panels.
 
 ### Adjusting panel configuration
 
@@ -242,34 +312,49 @@ FONT_SIZE=24
 
 ## Troubleshooting
 
+### Display screen is black after opening the URL
+
+The display container takes 10–15 seconds to start after `docker compose up`. Wait and refresh. If it stays black:
+
+```bash
+docker compose restart display1
+```
+
+### Operator console shows text in "Now Showing" but the display screen is black
+
+The display container is running but nothing has been sent yet. Load a script and press **Space** to push the first line.
+
 ### Displays show nothing after sending a line
 
-1. Check the bridge logs: `docker compose logs bridge`
-2. Check display logs: `docker compose logs display1`
-3. Confirm the green dot in the operator UI toolbar is lit — if not, the WebSocket is down
+1. Confirm the green dot in the operator UI toolbar is lit — if not, the WebSocket is down
+2. Check the bridge logs: `docker compose logs bridge`
+3. Check display logs: `docker compose logs display1`
 4. Click **Identify All** — if displays flash their numbers, ZeroMQ is working and only the `show` command failed
 
-### Display panel goes blank mid-show
+### Display goes blank mid-show
 
-ZeroMQ PUB/SUB drops messages sent before a subscriber is connected (no buffering). If a display restarts, it will show blank until the next line is sent. Press `↑` then `↓` to re-send the current line.
+ZeroMQ drops messages sent before a subscriber connects (no buffering). If a display container restarts mid-show, it shows blank until the next line is sent. Press `↑` then `↓` to re-send the current line.
+
+### Text is cut off or the font looks very small
+
+`FONT_SIZE` should be roughly `PANEL_HEIGHT × 0.9`. If you changed `PANEL_HEIGHT` in `docker-compose.yml`, update `FONT_SIZE` to match and rebuild:
+
+```bash
+docker compose up --build -d
+```
 
 ### `docker compose up` fails to build
 
 ```bash
-# Force a full rebuild (clears the Docker layer cache)
 docker compose build --no-cache
 docker compose up -d
 ```
 
-### Fonts look wrong or text is clipped
+### Display browser window doesn't fill the HDMI monitor
 
-The display daemon sizes the font to fill the panel height. If you change `PANEL_HEIGHT`, also adjust `FONT_SIZE` proportionally. The default configuration uses a 320 px font on a 360 px tall panel.
+The noVNC page scales to the browser window. Make sure the browser is actually fullscreen (not just maximized) on the target monitor. Use `F11` on Windows/Linux or `⌃⌘F` on Mac. The caption output will scale to fill whatever size the window is.
 
-### noVNC page is blank or "Connecting…"
-
-The display container may still be starting up. Wait 10–15 seconds and refresh. If it persists: `docker compose restart display1`
-
-### Pi display daemon crashes at startup
+### Pi display daemon crashes at startup (LED matrix path only)
 
 Almost always an audio PWM conflict. Confirm `/boot/firmware/config.txt` contains `dtparam=audio=off` and reboot.
 

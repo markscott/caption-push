@@ -7,14 +7,18 @@
 
 ## 1. Overview
 
-Caption Push is a low-latency, networked captioning system for live theater. An operator runs a browser-based console on any laptop. As the show progresses the operator advances through a pre-loaded script, and each caption line is broadcast in real time to HUB75 RGB LED matrix panels mounted at the front of the house. Each panel is driven by a Raspberry Pi.
+Caption Push is a low-latency, networked captioning system for live theater. An operator runs a browser-based console on any laptop. As the show progresses the operator advances through a pre-loaded script, and each caption line is broadcast in real time to one or more audience-facing displays.
+
+**Primary display path:** Any HDMI monitor connected to a computer running Docker. The display daemon renders text into a framebuffer served over noVNC; the operator opens the output URL fullscreen in a browser on the monitor. No special hardware is required.
+
+**Secondary display path:** HUB75 RGB LED matrix panels driven by a Raspberry Pi, for large-format or outdoor signage applications.
 
 **Design goals:**
-- ≤15 ms end-to-end latency (keypress → visible text on panel)
+- ≤15 ms end-to-end latency (keypress → visible text on display)
 - All displays receive the same frame simultaneously (no sequential unicast)
 - Operator UI is keyboard-driven — no mouse required during a live show
-- Simulation mode runs entirely on macOS or in Docker with no special hardware
-- Cheap, replaceable hardware (Pi Zero 2 W + commodity HUB75 panels)
+- HDMI monitor path requires only Docker Desktop — no special hardware
+- LED matrix path supported via rpi-rgb-led-matrix on Raspberry Pi
 
 ---
 
@@ -40,12 +44,18 @@ Caption Push is a low-latency, networked captioning system for live theater. An 
             │           │           │
             ▼           ▼           ▼
    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-   │ Pi Display 1 │  │ Pi Display 2 │  │ Pi Display N │
-   │ ZMQ SUB      │  │ ZMQ SUB      │  │ ZMQ SUB      │
-   │ daemon.py    │  │ daemon.py    │  │ daemon.py    │
-   │ HUB75 matrix │  │ HUB75 matrix │  │ HUB75 matrix │
+   │  Display 1   │  │  Display 2   │  │  Display N   │
+   │  daemon.py   │  │  daemon.py   │  │  daemon.py   │
+   │  ZMQ SUB     │  │  ZMQ SUB     │  │  ZMQ SUB     │
+   │  Pygame →    │  │  Pygame →    │  │  Pygame →    │
+   │  noVNC →     │  │  noVNC →     │  │  HUB75 LEDs  │
+   │  HDMI monitor│  │  HDMI monitor│  │  (Pi only)   │
    └──────────────┘  └──────────────┘  └──────────────┘
 ```
+
+**Primary (HDMI monitor):** The display daemon renders text into a Pygame window inside a Docker container. Xvfb provides a virtual framebuffer; x11vnc + noVNC serve the framebuffer as a browser-accessible URL. Opening that URL fullscreen on an HDMI monitor shows the captions.
+
+**Secondary (LED matrix):** On a Raspberry Pi the daemon drives HUB75 panels directly via the rpi-rgb-led-matrix library, bypassing the Pygame/VNC stack entirely.
 
 ### Component summary
 
@@ -57,8 +67,8 @@ Caption Push is a low-latency, networked captioning system for live theater. An 
 | `controller/server.ts` | Node.js + TypeScript | HTTP + WebSocket server + ZeroMQ PUB |
 | `display/daemon.py` | Python | ZMQ SUB + render loop + state machine |
 | `display/renderer.py` | Python + Pillow | Text/emoji → PIL Image |
-| `display/matrix_sim.py` | Python + Pygame | Simulated LED matrix (dev/Docker) |
-| `display/matrix_real.py` | Python + rpi-rgb-led-matrix | Physical HUB75 panel driver (Pi) |
+| `display/matrix_sim.py` | Python + Pygame | Pygame renderer → Xvfb → noVNC → HDMI monitor |
+| `display/matrix_real.py` | Python + rpi-rgb-led-matrix | Physical HUB75 panel driver (Pi only) |
 
 ---
 
@@ -348,9 +358,9 @@ After measuring the total rendered width of all runs, if `total_w + PADDING_X * 
 
 ## 7. Matrix Backends
 
-### 7.1 Simulator (`display/matrix_sim.py`)
+### 7.1 HDMI monitor backend (`display/matrix_sim.py`)
 
-Used in Docker and on macOS. Creates a Pygame window and renders LED panels as colored squares with gaps.
+Used in Docker (the primary production path for HDMI monitors) and on macOS. Creates a Pygame window that renders the caption output. With `PIXEL_SIZE=1` and `PIXEL_GAP=0` (the Docker defaults) every pixel maps 1:1 to a screen pixel, producing a clean text-on-black display. With larger pixel/gap values the output mimics the dot-matrix look of an LED matrix — useful for visual testing.
 
 **Pixel layout** (NumPy, no Python loops):
 ```python
@@ -441,19 +451,36 @@ If `id` is omitted, all displays flash. Flash duration is 2 seconds.
 
 ## 9. Docker Architecture
 
+Docker is the primary runtime for both development and live shows. Each display container produces a browser-accessible URL that the operator (or the person at the display location) opens fullscreen on an HDMI monitor.
+
+### How the HDMI monitor path works
+
+```
+display container
+  └── Xvfb :99  (virtual X11 framebuffer, 1920×360 px)
+        └── Pygame window  (caption daemon writes frames here)
+              └── x11vnc  (reads Xvfb, serves VNC on :5900)
+                    └── websockify  (wraps VNC in WebSocket)
+                          └── noVNC HTML5 client  (port 6080)
+                                └── Browser on HDMI monitor  ← audience sees this
+```
+
+The browser's noVNC client connects to the WebSocket, receives VNC frames, and renders them on a `<canvas>` element. The noVNC `resize=scale` parameter makes the canvas fill the browser window — so opening the URL fullscreen on any monitor at any resolution produces a clean full-screen display, regardless of whether the container's virtual framebuffer resolution matches the monitor.
+
 ### Containers
 
 ```
 docker-compose.yml
 ├── bridge    ← Dockerfile.bridge
 │   port 4000:3000  (operator browser)
-│   port 5555:5555  (ZMQ PUB, real Pis connect here from LAN)
+│   port 5555:5555  (ZMQ PUB — also reachable from LAN for Pi displays)
 │   env: NODE_ENV=production, ZMQ_ADDRESS=tcp://*:5555
 │
 ├── display1  ← Dockerfile.display
-│   port 6080:6080  (noVNC web viewer)
+│   port 6080:6080  (noVNC → open fullscreen on HDMI monitor)
 │   env: DISPLAY_ID=1, CONTROLLER_ADDRESS=tcp://bridge:5555
 │        PANEL_WIDTH=1920, PANEL_HEIGHT=360, FONT_SIZE=320
+│        PIXEL_SIZE=1, PIXEL_GAP=0   ← 1:1 pixel mapping (no LED dot effect)
 │
 └── display2  ← Dockerfile.display
     port 6081:6080
@@ -462,9 +489,9 @@ docker-compose.yml
 
 ### Bridge container (`Dockerfile.bridge`)
 
-Built from `node:20-slim`. Installs `zeromq` native bindings, compiles TypeScript, and runs `node server.js`. Exposes ports 3000 (HTTP/WS) and 5555 (ZMQ). The ZMQ port is also published to the host so real Raspberry Pi displays on the LAN can connect.
+Built from `node:20-slim`. Installs `zeromq` native bindings, compiles TypeScript, and runs `node server.js`. Exposes ports 3000 (HTTP/WS) and 5555 (ZMQ). Port 5555 is published to the host so Raspberry Pi displays on the LAN can also connect.
 
-A healthcheck polls `http://localhost:3000` every 5 seconds. Display containers wait for the bridge to be healthy before starting (prevents ZMQ connection failures during startup).
+A healthcheck polls `http://localhost:3000` every 5 seconds. Display containers declare `depends_on: bridge: condition: service_healthy` and will not start until the bridge is ready, preventing ZMQ connection races.
 
 ### Display container (`Dockerfile.display`)
 
@@ -473,8 +500,8 @@ Built from `python:3.11-slim`. Installs:
 - Python: `pyzmq`, `Pillow`, `pygame`, `numpy`, `fonttools`
 
 `display-entrypoint.sh` starts four processes in sequence:
-1. **Xvfb :99** — virtual X11 framebuffer, sized exactly to the pygame window dimensions
-2. **x11vnc** — VNC server on port 5900, no password, reads from Xvfb :99
+1. **Xvfb :99** — virtual X11 framebuffer, sized to `PANEL_WIDTH × (PIXEL_SIZE + PIXEL_GAP)` by `PANEL_HEIGHT × (PIXEL_SIZE + PIXEL_GAP)`
+2. **x11vnc** — VNC server on port 5900, no password, reads Xvfb :99
 3. **websockify** — WebSocket-to-TCP proxy serving noVNC HTML5 client on port 6080
 4. **python3 -u -m display.daemon** — caption display daemon (exec, becomes PID 1)
 
@@ -528,7 +555,7 @@ Each browser tab maintains its own position in the script. If a second operator 
 
 ### Emoji font availability
 
-Color emoji rendering requires `fonts-noto-color-emoji` to be installed. On the Raspberry Pi, the `pi_setup.sh` script does not currently install this package. Only the display Docker containers have emoji support. To add emoji to a Pi deployment: `sudo apt-get install fonts-noto-color-emoji fonts-noto fonttools`.
+Color emoji rendering requires `fonts-noto-color-emoji` to be installed. Docker display containers include it. The Raspberry Pi `pi_setup.sh` script does not currently install it — add it manually for Pi deployments: `sudo apt-get install fonts-noto-color-emoji fonttools`.
 
 ---
 
@@ -551,8 +578,8 @@ caption-push/
 ├── display/
 │   ├── daemon.py               # ZMQ SUB → render → matrix
 │   ├── renderer.py             # Text/emoji → PIL Image
-│   ├── matrix_sim.py           # Pygame LED simulator
-│   ├── matrix_real.py          # rpi-rgb-led-matrix wrapper
+│   ├── matrix_sim.py           # Pygame renderer → Xvfb → noVNC → HDMI monitor
+│   ├── matrix_real.py          # rpi-rgb-led-matrix wrapper (Pi + HUB75 only)
 │   └── __init__.py
 ├── docker/
 │   ├── Dockerfile.bridge       # Node bridge image
@@ -609,8 +636,9 @@ See `install/pi_setup.sh` and the [README](../README.md#raspberry-pi-deployment)
 
 - **Last-value cache on reconnect** — bridge re-sends current line to newly connected ZMQ subscribers via a REQ/REP companion socket
 - **Auto-advance mode** — follow SRT timestamps automatically in rehearsal mode
-- **Multi-line layout** — render two lines simultaneously for stacked 64×64 panel configurations
-- **Emoji on Pi** — add `fonts-noto-color-emoji` and `fonttools` to `pi_setup.sh`
+- **Multi-line layout** — render two or more caption lines simultaneously
+- **Wireless HDMI support docs** — guide for using wireless HDMI senders to reach display positions without running cables
 - **Tablet operator UI** — responsive layout for iPad as a roaming console
 - **Color cues in script** — per-character color coding in the plaintext format (e.g., `##COLOR #FF6600`)
 - **Script position broadcast** — bridge pushes current script position to all tabs so a second observer tab stays in sync
+- **Emoji on Pi** — add `fonts-noto-color-emoji` and `fonttools` to `pi_setup.sh`
