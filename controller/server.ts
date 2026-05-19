@@ -40,7 +40,21 @@ app.use(express.json())
 const PREVIEW_HOST = process.env.PREVIEW_HOST ?? 'display1'
 const PREVIEW_PORT = parseInt(process.env.PREVIEW_PORT ?? '7777')
 
-// Proxy a single JPEG snapshot from display1 — SimDisplay polls this at ~10fps
+// Proxy MJPEG stream from display1 — browser receives frames as fast as the daemon pushes them
+app.get('/preview/stream', (_req, res) => {
+  const proxy = httpRequest(
+    { hostname: PREVIEW_HOST, port: PREVIEW_PORT, path: '/stream', method: 'GET' },
+    (upstream) => {
+      res.setHeader('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
+      res.setHeader('Cache-Control', 'no-store')
+      upstream.pipe(res)
+    },
+  )
+  proxy.on('error', () => { if (!res.headersSent) res.status(503).end() })
+  proxy.end()
+})
+
+// Proxy a single JPEG snapshot (kept for backwards compat)
 app.get('/preview/frame', (_req, res) => {
   const proxy = httpRequest(
     { hostname: PREVIEW_HOST, port: PREVIEW_PORT, path: '/frame', method: 'GET' },

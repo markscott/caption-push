@@ -21,7 +21,7 @@ from PIL import Image as PILImage
 from display.renderer import RenderConfig, render_blank, render_identify, render_text
 
 
-SCROLL_SPEED_PX_S = 375.0  # pixels per second during scroll
+SCROLL_SPEED_PX_S = 80.0   # pixels per second during scroll
 SCROLL_DELAY_S    = 1.25   # pause before scrolling begins
 AUTO_CLEAR_S      = 10.0   # seconds after content is fully shown before auto-clear
 
@@ -53,7 +53,7 @@ def _is_raspberry_pi() -> bool:
 # ---- MJPEG preview server (operator UI polls this for exact PIL output) ----
 
 _preview_jpeg: bytes = b''
-_preview_lock = threading.Lock()
+_preview_cond = threading.Condition()
 
 
 def _update_preview(img: PILImage.Image, brightness: int = 100) -> None:
@@ -65,15 +65,22 @@ def _update_preview(img: PILImage.Image, brightness: int = 100) -> None:
         thumb = PILImage.fromarray(arr)
     buf = io.BytesIO()
     thumb.save(buf, format='JPEG', quality=80)
-    with _preview_lock:
+    with _preview_cond:
         _preview_jpeg = buf.getvalue()
+        _preview_cond.notify_all()
 
 
 class _FrameHandler(BaseHTTPRequestHandler):
-    """Serves the current rendered frame as a single JPEG — caller polls."""
+    """Serves display frames: /frame for a single JPEG, /stream for MJPEG."""
 
     def do_GET(self) -> None:
-        with _preview_lock:
+        if self.path.startswith('/stream'):
+            self._stream()
+        else:
+            self._single_frame()
+
+    def _single_frame(self) -> None:
+        with _preview_cond:
             frame = _preview_jpeg
         if not frame:
             self.send_response(204)
@@ -86,6 +93,29 @@ class _FrameHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.end_headers()
         self.wfile.write(frame)
+
+    def _stream(self) -> None:
+        self.send_response(200)
+        self.send_header('Content-Type', 'multipart/x-mixed-replace; boundary=frame')
+        self.send_header('Cache-Control', 'no-store')
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.end_headers()
+        try:
+            while True:
+                with _preview_cond:
+                    _preview_cond.wait(timeout=1.0)
+                    frame = _preview_jpeg
+                if not frame:
+                    continue
+                header = (
+                    b'--frame\r\n'
+                    b'Content-Type: image/jpeg\r\n'
+                    + f'Content-Length: {len(frame)}\r\n\r\n'.encode()
+                )
+                self.wfile.write(header + frame + b'\r\n')
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
     def log_message(self, *_args: object) -> None:
         pass
