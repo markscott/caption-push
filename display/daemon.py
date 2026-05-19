@@ -60,12 +60,14 @@ _preview_cond = threading.Condition()
 def _update_preview(img: PILImage.Image, brightness: int = 100) -> None:
     global _preview_jpeg
     import numpy as np
-    thumb = img.resize((img.width // 2, img.height // 2))
+    # LANCZOS preserves text sharpness when halving; default BICUBIC blends
+    # white text edges with black background, making text appear dimmer.
+    thumb = img.resize((img.width // 2, img.height // 2), PILImage.LANCZOS)
     if brightness < 100:
         arr = (np.array(thumb, dtype=np.float32) * (brightness / 100.0)).clip(0, 255).astype(np.uint8)
         thumb = PILImage.fromarray(arr)
     buf = io.BytesIO()
-    thumb.save(buf, format='JPEG', quality=80)
+    thumb.save(buf, format='JPEG', quality=90)
     with _preview_cond:
         _preview_jpeg = buf.getvalue()
         _preview_cond.notify_all()
@@ -246,10 +248,12 @@ def main() -> None:
     # Tracks the image queued for rendering; preview is pushed AFTER render_frame
     # so the operator UI always reflects what is actually visible on screen.
     pending_preview: list[PILImage.Image | None] = [None]
+    last_shown_img: list[PILImage.Image | None] = [None]
 
     def show_img(img: PILImage.Image) -> None:
         matrix.set_image(img)
         pending_preview[0] = img
+        last_shown_img[0] = img
 
     try:
         while True:
@@ -338,6 +342,8 @@ def main() -> None:
                     level = max(10, min(100, int(msg.get("level", 60))))
                     current_brightness = level
                     matrix.set_brightness(level)  # hardware brightness for real LED matrices
+                    if last_shown_img[0] is not None:
+                        pending_preview[0] = last_shown_img[0]  # re-encode preview at new brightness
                     print(f"{tag} brightness → {level}")
 
                 elif cmd == "identify":
