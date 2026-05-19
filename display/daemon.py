@@ -216,10 +216,13 @@ def main() -> None:
     current_hold: bool = False     # when True, never auto-clear
     preload_cache: _PreloadCache | None = None
     current_brightness: int = args.brightness
+    # Tracks the image queued for rendering; preview is pushed AFTER render_frame
+    # so the operator UI always reflects what is actually visible on screen.
+    pending_preview: list[PILImage.Image | None] = [None]
 
     def show_img(img: PILImage.Image) -> None:
         matrix.set_image(img)
-        _update_preview(img, current_brightness)
+        pending_preview[0] = img
 
     try:
         while True:
@@ -364,6 +367,10 @@ def main() -> None:
             if not matrix.render_frame():
                 print(f"{tag} window closed — exiting")
                 break
+            # Push preview after render so operator UI matches what's on screen
+            if pending_preview[0] is not None:
+                _update_preview(pending_preview[0], current_brightness)
+                pending_preview[0] = None
 
     except KeyboardInterrupt:
         print(f"\n{tag} shutting down")
