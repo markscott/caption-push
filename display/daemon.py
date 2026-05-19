@@ -4,6 +4,7 @@ import argparse
 import io
 import os
 import platform
+import queue
 import sys
 import threading
 import time
@@ -125,6 +126,30 @@ def _start_preview_server(port: int) -> None:
     ThreadingHTTPServer(('0.0.0.0', port), _FrameHandler).serve_forever()
 
 
+# ---- Background JPEG encoder ----
+# JPEG encoding (resize + compress) for a 1920×360 image takes ~10–20 ms.
+# Running it on the main render thread would stall the 60 fps loop.
+# Instead we keep a "latest frame" slot: the encoder always processes the
+# newest image; frames that arrive while it's busy are coalesced (latest wins).
+
+_encode_slot: list[tuple[PILImage.Image, int] | None] = [None]
+_encode_ready = threading.Event()
+
+
+def _encode_worker() -> None:
+    while True:
+        _encode_ready.wait()
+        _encode_ready.clear()
+        item = _encode_slot[0]
+        if item is not None:
+            _update_preview(item[0], item[1])
+
+
+def _submit_preview(img: PILImage.Image, brightness: int) -> None:
+    _encode_slot[0] = (img, brightness)
+    _encode_ready.set()
+
+
 def _hex_to_rgb(hex_color: str) -> tuple[int, int, int]:
     h = hex_color.lstrip("#")
     try:
@@ -198,6 +223,7 @@ def main() -> None:
     socket.setsockopt(zmq.RCVTIMEO, 16)
 
     threading.Thread(target=_start_preview_server, args=(7777,), daemon=True).start()
+    threading.Thread(target=_encode_worker, daemon=True).start()
 
     matrix.start()
     blank = render_blank(base_config)
@@ -369,7 +395,7 @@ def main() -> None:
                 break
             # Push preview after render so operator UI matches what's on screen
             if pending_preview[0] is not None:
-                _update_preview(pending_preview[0], current_brightness)
+                _submit_preview(pending_preview[0], current_brightness)
                 pending_preview[0] = None
 
     except KeyboardInterrupt:

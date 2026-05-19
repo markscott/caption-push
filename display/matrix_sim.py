@@ -55,11 +55,13 @@ class SimMatrix:
         self._screen = pygame.display.set_mode((self._win_w, self._win_h))
         pygame.display.set_caption(f"{self._title} #{self._display_id}")
         self._clock = pygame.time.Clock()
+        # Pre-allocated surface avoids a heap allocation on every dirty frame
+        self._blit_surface = pygame.Surface((self._win_w, self._win_h))
 
     def set_image(self, image: Image.Image) -> None:
-        arr = np.array(
-            image.resize((self.width, self.height), Image.NEAREST), dtype=np.uint8
-        )
+        if image.size != (self.width, self.height):
+            image = image.resize((self.width, self.height), Image.NEAREST)
+        arr = np.array(image, dtype=np.uint8)
         with self._lock:
             self._pixels = arr
             self._dirty = True
@@ -90,25 +92,22 @@ class SimMatrix:
         # Scale brightness
         scaled = (pixels.astype(np.float32) * scale).clip(0, 255).astype(np.uint8)
 
-        # Build the LED canvas using pure numpy (no Python pixel loops)
-        #
-        # Strategy: create a (H, cell, W, cell, 3) array, fill background,
-        # then stamp each LED color into the [0:ps, 0:ps] sub-region, then
-        # reshape to (H*cell, W*cell, 3).
         H, W = self.height, self.width
         ps = self._ps
         cell = self._cell
 
-        canvas = np.zeros((H, cell, W, cell, 3), dtype=np.uint8)
+        if cell == 1:
+            # No gap between LEDs — pixels map 1:1; skip the reshape entirely
+            frame = scaled
+        else:
+            # Build the LED canvas: stamp each LED color into ps×ps of each cell
+            canvas = np.zeros((H, cell, W, cell, 3), dtype=np.uint8)
+            canvas[:, :ps, :, :ps, :] = scaled[:, np.newaxis, :, np.newaxis, :]
+            frame = canvas.reshape(H * cell, W * cell, 3)
 
-        # Broadcast into the LED pixel block (top-left ps×ps of each cell)
-        canvas[:, :ps, :, :ps, :] = scaled[:, np.newaxis, :, np.newaxis, :]
-
-        frame = canvas.reshape(H * cell, W * cell, 3)
-
-        # pygame surfarray expects (W, H, 3) — transpose axes 0 and 1
-        surface = pygame.surfarray.make_surface(frame.transpose(1, 0, 2))
-        self._screen.blit(surface, (0, 0))
+        # pygame pixelcopy expects (W, H, 3) — reuse pre-allocated surface
+        pygame.pixelcopy.array_to_surface(self._blit_surface, np.ascontiguousarray(frame.transpose(1, 0, 2)))
+        self._screen.blit(self._blit_surface, (0, 0))
         pygame.display.flip()
 
         if self._clock:

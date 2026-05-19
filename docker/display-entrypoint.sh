@@ -31,6 +31,8 @@ x11vnc \
   -nopw \
   -rfbport 5900 \
   -quiet \
+  -wait 1 \
+  -defer 0 \
   -bg
 
 echo "[display-${DISPLAY_ID}] x11vnc started on :5900"
