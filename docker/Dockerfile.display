@@ -24,7 +24,7 @@ WORKDIR /app
 COPY display/ ./display/
 
 COPY docker/display-entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+RUN sed -i 's/\r//' /entrypoint.sh && chmod +x /entrypoint.sh
 
 # noVNC web viewer port
 EXPOSE 6080
