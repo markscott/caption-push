@@ -3,6 +3,9 @@ import type { CaptionLine, ClientMessage, ServerMessage } from './types'
 import { parseScript } from './scriptParser'
 import { SimDisplay } from './SimDisplay'
 
+const SPEED_STOPS = [0.2, 0.4, 0.6, 0.8, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
+const DEFAULT_SPEED_IDX = 4  // 1.0×
+
 const WS_URL = import.meta.env.DEV
   ? 'ws://localhost:3001/ws'
   : `ws://${window.location.host}/ws`
@@ -11,7 +14,7 @@ export default function App() {
   const [lines, setLines] = useState<CaptionLine[]>([])
   const [currentIdx, setCurrentIdx] = useState<number>(-1)
   const [brightness, setBrightness] = useState<number>(100)
-  const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.0)
+  const [speedIdx, setSpeedIdx] = useState<number>(DEFAULT_SPEED_IDX)
   const [manualText, setManualText] = useState<string>('')
   const [connected, setConnected] = useState<boolean>(false)
   const [statusMsg, setStatusMsg] = useState<string>('No script loaded')
@@ -198,9 +201,9 @@ export default function App() {
 
   // ---- Scroll speed ----
   function handleSpeed(e: React.ChangeEvent<HTMLInputElement>) {
-    const multiplier = parseFloat(e.target.value)
-    setSpeedMultiplier(multiplier)
-    send({ type: 'speed', multiplier })
+    const idx = parseInt(e.target.value)
+    setSpeedIdx(idx)
+    send({ type: 'speed', multiplier: SPEED_STOPS[idx] })
   }
 
   // ---- Manual send ----
@@ -263,16 +266,20 @@ export default function App() {
           />
         </div>
 
-        <div className="brightness-control">
-          <span>Speed {speedMultiplier.toFixed(1)}×</span>
+        <div className="speed-control">
+          <span>Speed {SPEED_STOPS[speedIdx].toFixed(1)}×</span>
           <input
             type="range"
-            min={0.1}
-            max={5.0}
-            step={0.1}
-            value={speedMultiplier}
+            min={0}
+            max={SPEED_STOPS.length - 1}
+            step={1}
+            value={speedIdx}
             onChange={handleSpeed}
+            list="speed-stops"
           />
+          <datalist id="speed-stops">
+            {SPEED_STOPS.map((_, i) => <option key={i} value={i} />)}
+          </datalist>
         </div>
 
         <div className={`conn-dot ${connected ? 'connected' : 'disconnected'}`}

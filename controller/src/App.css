@@ -90,6 +90,20 @@ body {
   accent-color: var(--accent);
 }
 
+.speed-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.speed-control input[type=range] {
+  width: 240px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
 .conn-dot {
   width: 8px;
   height: 8px;
