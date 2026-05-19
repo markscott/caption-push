@@ -12,6 +12,7 @@ export type ClientMessage =
   | { type: 'preload'; text: string; color?: string; align?: string }
   | { type: 'clear' }
   | { type: 'brightness'; level: number }
+  | { type: 'speed'; multiplier: number }
   | { type: 'identify'; id?: number }
 
 export type ServerMessage =

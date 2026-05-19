@@ -22,7 +22,7 @@ from PIL import Image as PILImage
 from display.renderer import RenderConfig, render_blank, render_identify, render_text
 
 
-SCROLL_SPEED_PX_S = 375.0  # pixels per second during scroll
+SCROLL_SPEED_PX_S = 375.0  # pixels per second during scroll (base; scaled by operator speed multiplier)
 SCROLL_DELAY_S    = 1.25   # pause before scrolling begins
 AUTO_CLEAR_S      = 10.0   # seconds after content is fully shown before auto-clear
 
@@ -237,6 +237,7 @@ def main() -> None:
     current_text: str = ""
     current_config = base_config
     identify_until: float = 0.0   # monotonic timestamp; >0 means identify is active
+    speed_multiplier: float = 1.0
     scroll_anim: _ScrollAnim | None = None
     t_clear: float | None = None  # monotonic time for auto-clear; None = no pending clear
     current_hold: bool = False     # when True, never auto-clear
@@ -329,6 +330,10 @@ def main() -> None:
                     show_img(render_blank(base_config))
                     print(f"{tag} clear")
 
+                elif cmd == "speed":
+                    speed_multiplier = max(0.1, min(5.0, float(msg.get("multiplier", 1.0))))
+                    print(f"{tag} speed → {speed_multiplier}x")
+
                 elif cmd == "brightness":
                     level = max(10, min(100, int(msg.get("level", 60))))
                     current_brightness = level
@@ -371,7 +376,7 @@ def main() -> None:
                 if now >= scroll_anim.t_scroll_start:
                     elapsed = now - scroll_anim.t_scroll_start
                     max_offset = scroll_anim.wide_img.width - base_config.width
-                    new_offset = min(SCROLL_SPEED_PX_S * elapsed, max_offset)
+                    new_offset = min(SCROLL_SPEED_PX_S * speed_multiplier * elapsed, max_offset)
                     scroll_anim.offset = new_offset
                     show_img(
                         _scroll_crop(scroll_anim.wide_img, int(new_offset),

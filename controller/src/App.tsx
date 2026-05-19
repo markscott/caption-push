@@ -11,6 +11,7 @@ export default function App() {
   const [lines, setLines] = useState<CaptionLine[]>([])
   const [currentIdx, setCurrentIdx] = useState<number>(-1)
   const [brightness, setBrightness] = useState<number>(100)
+  const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.0)
   const [manualText, setManualText] = useState<string>('')
   const [connected, setConnected] = useState<boolean>(false)
   const [statusMsg, setStatusMsg] = useState<string>('No script loaded')
@@ -195,6 +196,13 @@ export default function App() {
     send({ type: 'brightness', level })
   }
 
+  // ---- Scroll speed ----
+  function handleSpeed(e: React.ChangeEvent<HTMLInputElement>) {
+    const multiplier = parseFloat(e.target.value)
+    setSpeedMultiplier(multiplier)
+    send({ type: 'speed', multiplier })
+  }
+
   // ---- Manual send ----
   function sendManual(hold = false) {
     const text = manualText.trim()
@@ -252,6 +260,18 @@ export default function App() {
             max={100}
             value={brightness}
             onChange={handleBrightness}
+          />
+        </div>
+
+        <div className="brightness-control">
+          <span>Speed {speedMultiplier.toFixed(1)}×</span>
+          <input
+            type="range"
+            min={0.1}
+            max={5.0}
+            step={0.1}
+            value={speedMultiplier}
+            onChange={handleSpeed}
           />
         </div>
 

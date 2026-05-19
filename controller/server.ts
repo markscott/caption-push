@@ -119,6 +119,9 @@ wss.on('connection', (ws: WebSocket) => {
         case 'brightness':
           await zmqSend({ cmd: 'brightness', level: msg.level })
           break
+        case 'speed':
+          await zmqSend({ cmd: 'speed', multiplier: msg.multiplier })
+          break
         case 'identify':
           await zmqSend({ cmd: 'identify', ...(msg.id != null ? { id: msg.id } : {}) })
           break
