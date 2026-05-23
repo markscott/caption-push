@@ -158,6 +158,10 @@ She ain't doin' nuthin' to you.
 | `##STAGE <description>` | Red italic | No |
 | Any other `##` line | Dimmed metadata | No |
 
+### Encoding note
+
+Save script files as **UTF-8**. Most modern editors do this by default (VS Code, Notepad++, Windows 11 Notepad). Older Windows editors (Notepad on Windows 10 and earlier, Word `.txt` export) may save as Windows-1252, which will corrupt curly quotes, em-dashes, and accented characters. If characters look wrong after loading, re-save the file as UTF-8.
+
 ### SRT (`.srt`)
 
 Standard subtitle format. Timestamps are parsed and shown but the operator controls timing manually — Caption Push does not auto-advance.
