@@ -1,0 +1,57 @@
+services:
+
+  bridge:
+    image: markscott400/caption-push-bridge:latest
+    ports:
+      - "4000:3000"
+      - "5555:5555"
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      ZMQ_ADDRESS: "tcp://*:5555"
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', r => process.exit(r.statusCode === 200 ? 0 : 1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+
+  display1:
+    image: markscott400/caption-push-display:latest
+    restart: unless-stopped
+    ports:
+      - "6080:6080"
+    environment:
+      DISPLAY_ID: "1"
+      CONTROLLER_ADDRESS: "tcp://bridge:5555"
+      PANEL_WIDTH: "1920"
+      PANEL_HEIGHT: "360"
+      FONT_SIZE: "320"
+      MAX_LINES: "1"
+      PIXEL_SIZE: "1"
+      PIXEL_GAP: "0"
+      FONT_PATH: "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      bridge:
+        condition: service_healthy
+
+  display2:
+    image: markscott400/caption-push-display:latest
+    restart: unless-stopped
+    ports:
+      - "6081:6080"
+    environment:
+      DISPLAY_ID: "2"
+      CONTROLLER_ADDRESS: "tcp://bridge:5555"
+      PANEL_WIDTH: "1920"
+      PANEL_HEIGHT: "360"
+      FONT_SIZE: "320"
+      MAX_LINES: "1"
+      PIXEL_SIZE: "1"
+      PIXEL_GAP: "0"
+      FONT_PATH: "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      bridge:
+        condition: service_healthy
