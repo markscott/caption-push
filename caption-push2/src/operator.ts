@@ -972,10 +972,14 @@ export function initOperator(): void {
       simCaption.style.display    = 'inline-block';
       simCaption.style.transform  = 'translateX(0)';
 
-      // Measure natural text width once, synchronously (Firefox fix — see display.ts).
-      simWrapper.style.overflow = 'visible';
-      const textW = simCaption.offsetWidth;
-      simWrapper.style.overflow = '';
+      // position:fixed probe — same fix as display.ts; Firefox constrains inline-block
+      // offsetWidth to the nearest overflow:hidden BFC ancestor.
+      const probe = document.createElement('span');
+      probe.style.cssText = `position:fixed;top:-9999px;left:-9999px;white-space:nowrap;visibility:hidden;font-size:${s.fontSize}px;font-family:${s.fontFamily}`;
+      probe.textContent = displayedText;
+      document.body.appendChild(probe);
+      const textW = probe.offsetWidth;
+      document.body.removeChild(probe);
 
       // 0 3rem padding on a 1920px reference; hardcoded to match display.ts exactly
       const contentW = SIM_REF_W - 96;

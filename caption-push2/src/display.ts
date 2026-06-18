@@ -122,12 +122,16 @@ export function initDisplay(displayId: number): void {
       captionText.style.display = 'inline-block';
       captionText.style.transform = 'translateX(0)';
 
-      // Measure natural text width once, synchronously.
-      // Temporarily set overflow:visible on the wrapper so Firefox doesn't
-      // constrain the inline-block's offsetWidth to the container width.
-      wrapper.style.overflow = 'visible';
-      const textW = captionText.offsetWidth;
-      wrapper.style.overflow = '';
+      // Measure natural text width with a position:fixed probe outside any
+      // overflow:hidden ancestor — Firefox constrains offsetWidth of inline-block
+      // elements to the nearest overflow:hidden BFC, so we can't use captionText
+      // directly even after clearing wrapper.overflow.
+      const probe = document.createElement('span');
+      probe.style.cssText = `position:fixed;top:-9999px;left:-9999px;white-space:nowrap;visibility:hidden;font-size:${s.fontSize}px;font-family:${s.fontFamily}`;
+      probe.textContent = text;
+      document.body.appendChild(probe);
+      const textW = probe.offsetWidth;
+      document.body.removeChild(probe);
 
       const contentW = STAGE_W - 96;
 
