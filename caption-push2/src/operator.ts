@@ -972,48 +972,48 @@ export function initOperator(): void {
       simCaption.style.display    = 'inline-block';
       simCaption.style.transform  = 'translateX(0)';
 
-      function tick(): void {
-        const textW = simCaption.offsetWidth;
-        if (textW === 0) { simScrollRaf = requestAnimationFrame(tick); return; }
+      // Measure natural text width once, synchronously (Firefox fix — see display.ts).
+      simWrapper.style.overflow = 'visible';
+      const textW = simCaption.offsetWidth;
+      simWrapper.style.overflow = '';
 
-        // 0 3rem padding on a 1920px reference; hardcoded to match display.ts exactly
-        const contentW = SIM_REF_W - 96;
+      // 0 3rem padding on a 1920px reference; hardcoded to match display.ts exactly
+      const contentW = SIM_REF_W - 96;
 
-        if (textW <= contentW) {
-          // Text fits — show static, stop animating
-          simCaption.style.whiteSpace = 'pre-wrap';
-          simCaption.style.display    = 'block';
-          simCaption.style.transform  = '';
-          simScrollRaf = null;
-          if (!displayedHold) simAutoClearTimer = setTimeout(() => { displayedText = null; displayedHold = false; updateSimDisplay(); }, 7000);
-          return;
-        }
-
+      if (textW <= contentW) {
+        // Text fits — static display
+        simCaption.style.whiteSpace = 'pre-wrap';
+        simCaption.style.display    = 'block';
+        simCaption.style.transform  = '';
+        if (!displayedHold) simAutoClearTimer = setTimeout(() => { displayedText = null; displayedHold = false; updateSimDisplay(); }, 7000);
+      } else {
         // Same phase-based formula as display.ts — shared startTime keeps both frame-locked
-        // 1s start hold → scroll → 5s end hold → (loop if hold, else clear sim)
         const overflowPx = textW - contentW + 40;
         const scrollDuration = overflowPx / s.scrollSpeed;
         const phaseDuration = 1.0 + scrollDuration + 5.0;
-        const elapsed = (Date.now() - startTime) / 1000;
-        const phase = displayedHold ? elapsed % phaseDuration : elapsed;
 
-        if (phase >= phaseDuration) {
-          displayedText = null;
-          displayedHold = false;
-          updateSimDisplay();
-          return;
-        }
-        if (phase < 1.0) {
-          simCaption.style.transform = 'translateX(0)';
-        } else if (phase < 1.0 + scrollDuration) {
-          const scrolled = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
-          simCaption.style.transform = `translateX(${-scrolled}px)`;
-        } else {
-          simCaption.style.transform = `translateX(${-overflowPx}px)`;
+        function tick(): void {
+          const elapsed = (Date.now() - startTime) / 1000;
+          const phase = displayedHold ? elapsed % phaseDuration : elapsed;
+
+          if (phase >= phaseDuration) {
+            displayedText = null;
+            displayedHold = false;
+            updateSimDisplay();
+            return;
+          }
+          if (phase < 1.0) {
+            simCaption.style.transform = 'translateX(0)';
+          } else if (phase < 1.0 + scrollDuration) {
+            const scrolled = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
+            simCaption.style.transform = `translateX(${-scrolled}px)`;
+          } else {
+            simCaption.style.transform = `translateX(${-overflowPx}px)`;
+          }
+          simScrollRaf = requestAnimationFrame(tick);
         }
         simScrollRaf = requestAnimationFrame(tick);
       }
-      simScrollRaf = requestAnimationFrame(tick);
     } else {
       simCaption.style.transition = '';
       simCaption.style.opacity    = '1';

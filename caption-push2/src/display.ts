@@ -122,45 +122,47 @@ export function initDisplay(displayId: number): void {
       captionText.style.display = 'inline-block';
       captionText.style.transform = 'translateX(0)';
 
-      function tick(): void {
-        const textW = captionText.offsetWidth;
-        if (textW === 0) { scrollRafId = requestAnimationFrame(tick); return; }
+      // Measure natural text width once, synchronously.
+      // Temporarily set overflow:visible on the wrapper so Firefox doesn't
+      // constrain the inline-block's offsetWidth to the container width.
+      wrapper.style.overflow = 'visible';
+      const textW = captionText.offsetWidth;
+      wrapper.style.overflow = '';
 
-        // 0 3rem padding on a 1920px stage; hardcoded to match the sim exactly
-        const contentW = STAGE_W - 96;
+      const contentW = STAGE_W - 96;
 
-        if (textW <= contentW) {
-          // Text fits — show static, stop animating
-          captionText.style.whiteSpace = 'pre-wrap';
-          captionText.style.display = 'block';
-          captionText.style.transform = '';
-          scrollRafId = null;
-          if (!hold) autoClearTimer = setTimeout(clearDisplay, 7000);
-          return;
-        }
-
+      if (textW <= contentW) {
+        // Text fits — static display
+        captionText.style.whiteSpace = 'pre-wrap';
+        captionText.style.display = 'block';
+        captionText.style.transform = '';
+        if (!hold) autoClearTimer = setTimeout(clearDisplay, 7000);
+      } else {
         // Text overflows: 1s start hold → scroll → 5s end hold → (loop if hold, else clear)
         const overflowPx = textW - contentW + 40;
         const scrollDuration = overflowPx / s.scrollSpeed;
         const phaseDuration = 1.0 + scrollDuration + 5.0;
-        const elapsed = (Date.now() - startTime) / 1000;
-        const phase = hold ? elapsed % phaseDuration : elapsed;
 
-        if (phase >= phaseDuration) {
-          clearDisplay();
-          return;
-        }
-        if (phase < 1.0) {
-          captionText.style.transform = 'translateX(0)';
-        } else if (phase < 1.0 + scrollDuration) {
-          const scrolled = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
-          captionText.style.transform = `translateX(${-scrolled}px)`;
-        } else {
-          captionText.style.transform = `translateX(${-overflowPx}px)`;
+        function tick(): void {
+          const elapsed = (Date.now() - startTime) / 1000;
+          const phase = hold ? elapsed % phaseDuration : elapsed;
+
+          if (phase >= phaseDuration) {
+            clearDisplay();
+            return;
+          }
+          if (phase < 1.0) {
+            captionText.style.transform = 'translateX(0)';
+          } else if (phase < 1.0 + scrollDuration) {
+            const scrolled = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
+            captionText.style.transform = `translateX(${-scrolled}px)`;
+          } else {
+            captionText.style.transform = `translateX(${-overflowPx}px)`;
+          }
+          scrollRafId = requestAnimationFrame(tick);
         }
         scrollRafId = requestAnimationFrame(tick);
       }
-      scrollRafId = requestAnimationFrame(tick);
     } else {
       captionText.style.transition = '';
       captionText.style.opacity = '1';
