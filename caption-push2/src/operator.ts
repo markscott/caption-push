@@ -925,7 +925,7 @@ export function initOperator(): void {
       clearTimeout(simAutoClearTimer);
       simAutoClearTimer = null;
     }
-    simCaption.style.transform  = '';
+    simWrapper.scrollLeft = 0;
     simCaption.style.whiteSpace = 'pre-wrap';
     simCaption.style.display    = 'block';
   }
@@ -942,7 +942,6 @@ export function initOperator(): void {
       simCaption.style.textAlign  = 'center';
       simCaption.style.opacity    = '1';
       simCaption.style.transition = '';
-      simCaption.style.transform  = '';
       simCaption.style.whiteSpace = 'pre-wrap';
       simCaption.style.display    = 'block';
       simCaption.textContent      = '—';
@@ -970,10 +969,9 @@ export function initOperator(): void {
       simCaption.textContent      = displayedText;
       simCaption.style.whiteSpace = 'nowrap';
       simCaption.style.display    = 'inline-block';
-      simCaption.style.transform  = 'translateX(0)';
 
-      // position:fixed probe — same fix as display.ts; Firefox constrains inline-block
-      // offsetWidth to the nearest overflow:hidden BFC ancestor.
+      // position:fixed probe — Firefox constrains inline-block offsetWidth to
+      // the nearest overflow:hidden BFC ancestor; probe bypasses that.
       const probe = document.createElement('span');
       probe.style.cssText = `position:fixed;top:-9999px;left:-9999px;white-space:nowrap;visibility:hidden;font-size:${s.fontSize}px;font-family:${s.fontFamily}`;
       probe.textContent = displayedText;
@@ -981,17 +979,15 @@ export function initOperator(): void {
       const textW = probe.offsetWidth;
       document.body.removeChild(probe);
 
-      // 0 3rem padding on a 1920px reference; hardcoded to match display.ts exactly
       const contentW = SIM_REF_W - 96;
 
       if (textW <= contentW) {
         // Text fits — static display
         simCaption.style.whiteSpace = 'pre-wrap';
         simCaption.style.display    = 'block';
-        simCaption.style.transform  = '';
         if (!displayedHold) simAutoClearTimer = setTimeout(() => { displayedText = null; displayedHold = false; updateSimDisplay(); }, 7000);
       } else {
-        // Same phase-based formula as display.ts — shared startTime keeps both frame-locked
+        // Scroll via simWrapper.scrollLeft — no transform, avoids Firefox compositing bugs.
         const overflowPx = textW - contentW + 40;
         const scrollDuration = overflowPx / s.scrollSpeed;
         const phaseDuration = 1.0 + scrollDuration + 5.0;
@@ -1007,12 +1003,11 @@ export function initOperator(): void {
             return;
           }
           if (phase < 1.0) {
-            simCaption.style.transform = 'translateX(0)';
+            simWrapper.scrollLeft = 0;
           } else if (phase < 1.0 + scrollDuration) {
-            const scrolled = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
-            simCaption.style.transform = `translateX(${-scrolled}px)`;
+            simWrapper.scrollLeft = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
           } else {
-            simCaption.style.transform = `translateX(${-overflowPx}px)`;
+            simWrapper.scrollLeft = overflowPx;
           }
           simScrollRaf = requestAnimationFrame(tick);
         }

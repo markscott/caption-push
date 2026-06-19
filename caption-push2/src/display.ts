@@ -89,7 +89,7 @@ export function initDisplay(displayId: number): void {
       clearTimeout(autoClearTimer);
       autoClearTimer = null;
     }
-    captionText.style.transform = '';
+    wrapper.scrollLeft = 0;
     captionText.style.whiteSpace = 'pre-wrap';
     captionText.style.display = 'block';
   }
@@ -120,12 +120,9 @@ export function initDisplay(displayId: number): void {
       captionText.textContent = text;
       captionText.style.whiteSpace = 'nowrap';
       captionText.style.display = 'inline-block';
-      captionText.style.transform = 'translateX(0)';
 
-      // Measure natural text width with a position:fixed probe outside any
-      // overflow:hidden ancestor — Firefox constrains offsetWidth of inline-block
-      // elements to the nearest overflow:hidden BFC, so we can't use captionText
-      // directly even after clearing wrapper.overflow.
+      // Measure text width with a position:fixed probe — Firefox constrains
+      // offsetWidth of inline-block inside overflow:hidden to the BFC width.
       const probe = document.createElement('span');
       probe.style.cssText = `position:fixed;top:-9999px;left:-9999px;white-space:nowrap;visibility:hidden;font-size:${s.fontSize}px;font-family:${s.fontFamily}`;
       probe.textContent = text;
@@ -139,10 +136,11 @@ export function initDisplay(displayId: number): void {
         // Text fits — static display
         captionText.style.whiteSpace = 'pre-wrap';
         captionText.style.display = 'block';
-        captionText.style.transform = '';
         if (!hold) autoClearTimer = setTimeout(clearDisplay, 7000);
       } else {
-        // Text overflows: 1s start hold → scroll → 5s end hold → (loop if hold, else clear)
+        // Text overflows: scroll via wrapper.scrollLeft (no transform — avoids
+        // Firefox compositing bugs with transforms inside scaled ancestors).
+        // 1s start hold → scroll → 5s end hold → loop if hold, else clear.
         const overflowPx = textW - contentW + 40;
         const scrollDuration = overflowPx / s.scrollSpeed;
         const phaseDuration = 1.0 + scrollDuration + 5.0;
@@ -156,12 +154,11 @@ export function initDisplay(displayId: number): void {
             return;
           }
           if (phase < 1.0) {
-            captionText.style.transform = 'translateX(0)';
+            wrapper.scrollLeft = 0;
           } else if (phase < 1.0 + scrollDuration) {
-            const scrolled = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
-            captionText.style.transform = `translateX(${-scrolled}px)`;
+            wrapper.scrollLeft = Math.min((phase - 1.0) * s.scrollSpeed, overflowPx);
           } else {
-            captionText.style.transform = `translateX(${-overflowPx}px)`;
+            wrapper.scrollLeft = overflowPx;
           }
           scrollRafId = requestAnimationFrame(tick);
         }
